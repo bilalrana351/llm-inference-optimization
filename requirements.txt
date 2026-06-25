@@ -10,14 +10,20 @@
 # pins below are the things that are safe to fix.
 
 # --- Task 1: HuggingFace baseline ---
-# accelerate <0.34 caps numpy<2.0, which downgrades Colab's numpy and breaks the
-# preinstalled pandas (built against numpy 2.x) with a dtype-size ABI error.
-# 0.34.2 adds numpy-2 support and still pairs cleanly with transformers 4.44.2.
-transformers==4.44.2
+# transformers 4.44.2 used the legacy per-layer rotary embedding that registers
+# cos_cached/sin_cached buffers sized to max_position_embeddings (131072 for
+# Qwen2.5), duplicated across all 28 layers. That is a fixed 1.79 GB of VRAM
+# (28 layers x 2 tables x 131072 x 128 x 2 bytes) that has nothing to do with
+# the weights and never gets used past the current sequence length. 4.46+ moved
+# rotary to a single model-level module that computes cos/sin on the fly, so the
+# buffers vanish and resident weights drop to the clean ~2944 MiB fp16 floor.
+# accelerate 0.34.2 already supports numpy 2; tokenizers must move to 0.20.x to
+# satisfy transformers 4.46.
+transformers==4.46.3
 accelerate==0.34.2
 # Qwen2.5 tokenizer is a fast tokenizer, no sentencepiece needed, but pin these
 # anyway so a fresh clone is deterministic.
-tokenizers==0.19.1
+tokenizers==0.20.3
 safetensors==0.4.4
 
 # --- plotting / logging (Task 3 + results) ---
