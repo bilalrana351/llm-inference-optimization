@@ -55,6 +55,17 @@ def main() -> None:
         kind, dtype = key
         print(f"  {kind:6s} {str(dtype):16s} {nbytes / 2**20:9.1f} MiB")
 
+    # The breakdown above pins the cost on buffers, not weights. Name the big
+    # ones so we can see exactly which tensor (most likely a precomputed mask
+    # sized to max_position_embeddings) is eating the budget.
+    named_bufs = [
+        (name, b.numel() * b.element_size(), tuple(b.shape), b.dtype)
+        for name, b in model.named_buffers()
+    ]
+    print("\nlargest buffers by size:")
+    for name, nbytes, shape, dtype in sorted(named_bufs, key=lambda x: -x[1])[:10]:
+        print(f"  {nbytes / 2**20:9.1f} MiB  {str(dtype):14s} {shape}  {name}")
+
     total_params = sum(p.numel() for p in model.parameters())
     allocated_mib = torch.cuda.memory_allocated(dev_idx) / 2**20
 
