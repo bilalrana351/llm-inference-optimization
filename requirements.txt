@@ -10,8 +10,11 @@
 # pins below are the things that are safe to fix.
 
 # --- Task 1: HuggingFace baseline ---
+# accelerate <0.34 caps numpy<2.0, which downgrades Colab's numpy and breaks the
+# preinstalled pandas (built against numpy 2.x) with a dtype-size ABI error.
+# 0.34.2 adds numpy-2 support and still pairs cleanly with transformers 4.44.2.
 transformers==4.44.2
-accelerate==0.33.0
+accelerate==0.34.2
 # Qwen2.5 tokenizer is a fast tokenizer, no sentencepiece needed, but pin these
 # anyway so a fresh clone is deterministic.
 tokenizers==0.19.1
