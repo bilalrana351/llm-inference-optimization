@@ -167,6 +167,49 @@ is served from the pool with zero driver calls. Segment size is decided per
 driver trip by the triggering request, not once up front; `reserved` is the sum
 of segments.
 
+## What "weights resident" actually includes: the RoPE buffer trap
+
+`memory_allocated` right after load, before any forward pass, should equal the
+weight floor and nothing else. For an fp16 model that floor is exactly
+`params x 2 bytes`. Qwen2.5-1.5B is 1.544e9 params, so the floor is 2944 MiB. If
+the measured number is far above that, something non-weight is resident, and it
+is worth chasing before it silently eats the KV budget.
+
+On the first baseline run, weights reported 4737 MiB, ~1.8 GB over floor. It was
+not the weights and not an fp16-cast leak. Breaking the live allocation down by
+(param/buffer, dtype) put the whole excess in fp16 buffers, and naming the
+buffers found it: legacy per-layer RoPE caches.
+
+- transformers 4.44.2 used the old rotary embedding that registers
+  `cos_cached`/`sin_cached` as persistent buffers, one pair per attention layer,
+  each sized to `max_position_embeddings` x `head_dim`. For Qwen2.5 that is
+  131072 x 128 in fp16 = 32 MiB per table, two tables per layer, 28 layers:
+  `28 x 2 x 131072 x 128 x 2 bytes = 1792 MiB`. That matched the excess exactly.
+
+This is a bad space-time trade, and the contrast with the KV cache is the point.
+The cos/sin table depends only on (position, frequency), never on token data, so
+recomputing it is a couple of `sin`/`cos` calls over the current positions,
+nearly free. The KV cache depends on the actual tokens and recomputing it means
+redoing O(n^2) attention over the prefix, so it must be stored. The legacy code
+cached the cheap, recomputable thing, sized to the full 128K context regardless
+of the sequence actually run, and duplicated it across all 28 layers.
+
+transformers 4.46+ hoists rotary to a single model-level module that computes
+cos/sin on the fly for only the positions present, storing nothing but the tiny
+`inv_freq` vector (64 fp32 entries per layer, ~7 KB total). After bumping the pin
+to 4.46.3, resident weights dropped to 2945 MiB, one MiB off the floor.
+
+Two takeaways for the harness:
+
+1. Sanity-check resident weights against `params x dtype_bytes` before trusting
+   any VRAM budget. A library version can silently park over a GB of buffers in
+   what you are calling "weights." `test/probe_weights_vram.py` does this
+   breakdown by (kind, dtype) and lists the largest named buffers.
+2. The buffer never touched decode speed. Decode indexes one row of the cos/sin
+   table per step, it does not stream all 1.79 GB, so tokens/sec was unaffected.
+   The cost was purely a fixed KV-headroom tax: ~1.8 GB / 28 KiB-per-token is
+   about 64k tokens of context the OOM sweep would have lost to a library wart.
+
 ## What OOM actually is
 
 When the pool cannot satisfy a request from existing free blocks, it asks the
