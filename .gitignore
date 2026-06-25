@@ -1,0 +1,42 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Caches and tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Model weights and HuggingFace cache (large, reproducible from scripts)
+*.bin
+*.safetensors
+*.pt
+*.pth
+hf_cache/
+.cache/huggingface/
+
+# Logs and scratch
+*.log
+nohup.out
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
