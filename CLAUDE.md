@@ -19,19 +19,29 @@ For the complete details of Phase 1 (full scope, methodology, and deliverables),
 
 Final-year CS student at NUST Islamabad, founding engineer at an AI startup. Phase 0 is done and I have the theory cold: transformer inference arithmetic, KV-cache growth math, prefill vs decode, why decode is memory-bound, CUDA GEMM tiling (Simon Boehm's SGEMM article, Horace He's "Making Deep Learning Go Brrrr"). Assume that level. Skip introductory explanations of attention, the KV cache, or what fp16 is. When something is new, explain it at the level of someone who knows the systems theory but is running this exact stack for the first time.
 
+## Current compute (Vast.ai RTX 3060 box)
+
+We are no longer on Colab. Phase 1 runs on a rented Vast.ai box, see `docs/vastai.md` for the full record. Where this and any older Colab references disagree on hardware, the Vast.ai box wins.
+
+- GPU: one NVIDIA RTX 3060, 12GB, on-demand, about $0.045/hr. Ampere, compute capability 8.6 (sm_86).
+- Stack: NVIDIA NGC PyTorch image, driver 580.126.09, CUDA 13.0, torch 2.12.0+cu130 preinstalled. transformers, vLLM, accelerate are NOT preinstalled. HuggingFace and GitHub are both reachable from the box.
+- Persistent working directory is `/workspace`. Storage is billed while stopped, so the repo and the weights cache (`HF_HOME=/workspace/hf-cache`) live in `/workspace`, never `/root` or `/tmp`. Destroy the instance when done for the week.
+- Two environments on purpose. Environment A (HF baseline) uses the preinstalled torch 2.12, just add transformers + accelerate. Environment B (vLLM) is a fresh venv at `/workspace/vllm-env` where vLLM brings its own matching torch for CUDA 13.0 (uv recommended: `uv pip install vllm --torch-backend=cu130`). Do NOT `pip install vllm` into Environment A: it would clobber torch 2.12 with vLLM's bundled 2.11.
+- The sm_86 card resolves the old T4 attention-backend worry: FlashAttention and vLLM's good kernels support this card, so no fallback backend.
+
 ## Hard technical constraints (these change your decisions)
 
-- Target fp16. NOT bf16. The T4 (and the V100 I use later) do not support bf16. Never default to bf16.
-- Single GPU. On Colab this is one T4, 16GB. If a multi-GPU runtime ever appears, pin to one device so the measurement stays clean single-GPU.
-- Small model: Qwen2.5-1.5B or TinyLlama. Weights in fp16 are roughly 3GB, which leaves headroom for the KV cache to grow into.
-- The small GPU is intentional for the OOM experiment. We WANT to hit the KV-cache wall at a realistic context length, so do not suggest a bigger GPU to "avoid" the crash. The crash is the experiment.
+- Target fp16. NOT bf16. The 3060 supports bf16, but we still target fp16 for comparability with the later NUST HPC V100/T4 runs (which do not support bf16), and it does not change the KV-cache OOM math (fp16 and bf16 are both 2 bytes per element). Never default to bf16.
+- Single GPU, the one RTX 3060, 12GB. If a multi-GPU runtime ever appears, pin to one device so the measurement stays clean single-GPU.
+- Small model: Qwen2.5-1.5B or TinyLlama. Weights in fp16 are roughly 3GB, which on 12GB leaves roughly 9GB for the KV cache to grow into.
+- The small GPU is intentional for the OOM experiment. We WANT to hit the KV-cache wall at a realistic context length, so do not suggest a bigger GPU to "avoid" the crash. The crash is the experiment. On 12GB the cliff comes slightly sooner than on a 16GB card, which makes the sweep faster and cheaper.
 - The measurement harness must separate prefill from decode, and must log both tokens/sec and VRAM (track allocated and reserved separately). Get this boringly correct on the transformers baseline before trusting any vLLM number.
 
 ## Workflow
 
-- Local-first. I develop here with Claude Code on my laptop. Colab is only the GPU executor.
-- Run loop: I push to GitHub, then a thin Colab notebook does `git pull` and runs the script on the T4. GPU tracebacks get pasted back into the session for debugging.
-- The repo is the artifact: keep it clean, reproducible, and documented. Pin dependency versions (the vLLM install is the main friction point of this phase). Prefer runnable scripts over notebook-only code so results reproduce.
+- Claude Code runs on the box. Claude Code is over SSH directly on the rented Vast.ai machine, so it edits, runs on the GPU, reads tracebacks, and commits all in one place. No laptop-to-runner git push/pull loop.
+- Claude Code needs Node, which the NGC image may not include. If `node --version` fails, install a current Node, then `npm install -g @anthropic-ai/claude-code`. Set git identity on the box so commits are attributed correctly.
+- The repo is the artifact: keep it clean, reproducible, and documented. Pin dependency versions (the vLLM install is the main friction point of this phase, now the fresh CUDA 13.0 / torch 2.12 stack rather than a Turing backend issue). Prefer runnable scripts over notebook-only code so results reproduce.
 - Commit experiment outputs (plots, CSV logs) alongside the code that produced them.
 
 ## Where this is heading (later phases)
