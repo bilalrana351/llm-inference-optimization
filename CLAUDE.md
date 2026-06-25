@@ -13,6 +13,8 @@ Phase 1 scope, concretely:
 - Headline experiment: deliberately OOM the KV cache. Push context length up in steps, log VRAM at each step, plot the curve, find the crash point. This turns the Phase 0 KV-cache math into a measured plot.
 - Capture as you measure: commit plots and logs and update the blog draft in the same pass. The published measurement is the deliverable, not the running of it.
 
+For the complete details of Phase 1 (full scope, methodology, and deliverables), see `docs/phase1.md`.
+
 ## Who I am (so you calibrate, do not over-explain)
 
 Final-year CS student at NUST Islamabad, founding engineer at an AI startup. Phase 0 is done and I have the theory cold: transformer inference arithmetic, KV-cache growth math, prefill vs decode, why decode is memory-bound, CUDA GEMM tiling (Simon Boehm's SGEMM article, Horace He's "Making Deep Learning Go Brrrr"). Assume that level. Skip introductory explanations of attention, the KV cache, or what fp16 is. When something is new, explain it at the level of someone who knows the systems theory but is running this exact stack for the first time.

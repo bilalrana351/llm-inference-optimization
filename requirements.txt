@@ -1,0 +1,29 @@
+# Phase 1 dependencies.
+#
+# Two groups. The baseline (Task 1) needs only transformers + torch and is what
+# these pins cover. vLLM (Task 2) drags in its own torch/CUDA constraints and is
+# the main friction point of the phase, so it gets installed separately and the
+# working combination is recorded in the README rather than pinned blindly here.
+#
+# On Colab, torch ships preinstalled and matched to the runtime's CUDA. Do not
+# force a torch version for the baseline; use what the T4 runtime provides. The
+# pins below are the things that are safe to fix.
+
+# --- Task 1: HuggingFace baseline ---
+transformers==4.44.2
+accelerate==0.33.0
+# Qwen2.5 tokenizer is a fast tokenizer, no sentencepiece needed, but pin these
+# anyway so a fresh clone is deterministic.
+tokenizers==0.19.1
+safetensors==0.4.4
+
+# --- plotting / logging (Task 3 + results) ---
+matplotlib==3.9.2
+pandas==2.2.2
+
+# --- Task 2: vLLM ---
+# Installed separately on Colab. Recorded working combination (fill in after the
+# run actually succeeds on the T4):
+#   vllm==0.6.1.post2  with the torch it pulls in
+# Install line used in colab/run.ipynb:
+#   pip install vllm==0.6.1.post2
