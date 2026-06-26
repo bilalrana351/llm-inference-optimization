@@ -50,6 +50,42 @@ def reset_peak_vram(device: int = 0) -> None:
     torch.cuda.reset_peak_memory_stats(device)
 
 
+def device_used_mib(device: int = 0) -> float:
+    """GPU memory used by every process on the device, in MiB, read via NVML.
+
+    The vLLM path needs this. vLLM's v1 engine runs the model in a separate
+    child process (EngineCore), so torch.cuda.memory_allocated() called from the
+    parent reads 0: the weights, the reserved KV pool, and the CUDA-graph buffers
+    all live in the child. NVML reports the device's actual used memory, which
+    does include the child's allocations, so it is the honest number for vLLM.
+
+    Falls back to nvidia-smi if pynvml is not importable. Returns 0.0 if neither
+    works, so a measurement failure is visible as a zero rather than a crash.
+    """
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        handle = pynvml.nvmlDeviceGetHandleByIndex(device)
+        used = pynvml.nvmlDeviceGetMemoryInfo(handle).used
+        pynvml.nvmlShutdown()
+        return bytes_to_mib(used)
+    except Exception:
+        pass
+    try:
+        smi = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used",
+             "--format=csv,noheader,nounits", "-i", str(device)],
+            capture_output=True, text=True, timeout=10,
+        )
+        if smi.returncode == 0:
+            # nvidia-smi already reports MiB, so no conversion.
+            return float(smi.stdout.strip().splitlines()[0])
+    except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+        pass
+    return 0.0
+
+
 @dataclass
 class VramSnapshot:
     """A point-in-time view of GPU memory, all in MiB.

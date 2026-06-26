@@ -47,10 +47,8 @@ from vllm import LLM, SamplingParams
 
 from bench_common import (
     BenchResult,
-    VramSnapshot,
-    bytes_to_mib,
+    device_used_mib,
     print_env,
-    reset_peak_vram,
     write_result,
 )
 
@@ -133,23 +131,27 @@ def main() -> None:
         enforce_eager=False,          # keep CUDA graphs on; they are part of the win
     )
 
-    # After construction this is weights plus the pre-reserved KV pool, not just
-    # weights. Recorded for the row, but flagged in the note as non-comparable.
-    torch.cuda.synchronize()
-    post_init_mib = bytes_to_mib(torch.cuda.memory_allocated())
-    print(f"resident after init (weights + reserved KV pool): {post_init_mib:.0f} MiB")
+    # After construction this is weights plus the pre-reserved KV pool plus the
+    # captured CUDA-graph buffers, not just weights. Read via NVML, not
+    # torch.cuda: the v1 engine allocates all of it in the EngineCore child
+    # process, which the parent's torch allocator cannot see (it would report 0).
+    post_init_mib = device_used_mib()
+    print(f"device used after init (weights + KV pool + graphs): {post_init_mib:.0f} MiB")
 
     # --- warmup (discarded): first call pays CUDA graph capture and autotuning ---
     print("warmup (discarded) ...")
     timed_generate(llm, prompt_token_ids, max_tokens=8)
 
     # --- measured: prefill-only run, then the full run; decode is the gap ---
-    reset_peak_vram()
+    # No torch peak-reset here: the v1 engine runs in a child process, so the
+    # parent's torch peak counters never move. We read device-used via NVML
+    # instead. vLLM reserves the whole pool at init, so used memory stays flat
+    # through generation; we still take the max of init and post-run to be safe.
     print(f"measured: prompt={actual_prompt_tokens} tok, new={args.new_tokens} tok")
 
     prefill_s = timed_generate(llm, prompt_token_ids, max_tokens=1)
     total_s = timed_generate(llm, prompt_token_ids, max_tokens=args.new_tokens)
-    vram = VramSnapshot.capture()
+    peak_used_mib = max(post_init_mib, device_used_mib())
 
     decode_s = max(total_s - prefill_s, 1e-9)
     decode_count = max(args.new_tokens - 1, 0)
@@ -168,11 +170,15 @@ def main() -> None:
         decode_tokens_per_sec=decode_tps,
         prefill_tokens_per_sec=prefill_tps,
         weights_vram_mib=post_init_mib,
-        peak_allocated_mib=vram.peak_allocated_mib,
-        peak_reserved_mib=vram.peak_reserved_mib,
+        # NVML reports one device-level "used" figure, not torch's
+        # allocated/reserved split, so both peak fields carry that single number.
+        peak_allocated_mib=peak_used_mib,
+        peak_reserved_mib=peak_used_mib,
         note=(
-            f"vram=weights+reserved KV pool @ gpu_mem_util={args.gpu_mem_util}, "
-            f"max_model_len={max_model_len}; not comparable to HF organic growth"
+            f"NVML device-used (weights+reserved KV pool+CUDA graphs) @ "
+            f"gpu_mem_util={args.gpu_mem_util}, max_model_len={max_model_len}; "
+            f"not comparable to HF organic growth. Per-component split "
+            f"(weights / KV pool / graphs) is in the vLLM init log."
         ),
     )
     write_result(result, args.csv)
@@ -181,11 +187,11 @@ def main() -> None:
     print("\n" + "-" * 60)
     print(f"prefill        {prefill_s * 1000:8.1f} ms   ({prefill_tps:7.1f} tok/s over prompt)")
     print(f"decode         {decode_tps:8.1f} tok/s ({decode_count} tokens in {decode_s:.3f} s)")
-    print(f"init resident  {post_init_mib:8.0f} MiB  (weights + reserved KV pool)")
-    print(f"peak allocated {vram.peak_allocated_mib:8.0f} MiB")
-    print(f"peak reserved  {vram.peak_reserved_mib:8.0f} MiB")
+    print(f"device used    {post_init_mib:8.0f} MiB  (weights + KV pool + graphs, via NVML)")
+    print(f"peak device    {peak_used_mib:8.0f} MiB")
     print("-" * 60)
     print("note: vLLM VRAM is the reserved pool, not HF-style organic growth.")
+    print("      per-component breakdown is in the vLLM init log lines.")
     print(f"row appended -> {args.csv}")
 
 
