@@ -45,9 +45,48 @@ rate and prefill latency, not peak bytes.
 
 ## The OOM curve
 
-<!-- The headline. Push context length up in steps, log peak VRAM at each step,
-catch the CUDA OOM, and plot measured VRAM against the analytical KV-cache
-prediction. Written the moment results/oom_curve.png exists. -->
+The headline experiment: a 32-token prompt, then grow the context one decoded
+token at a time and log VRAM every 1000 tokens until the card dies. Decode growth
+is deliberate, each step touches one position so its transient is a small
+constant, and the peak at any length is weights plus cache plus a little, the
+cleanest match to the Phase 0 KV-cache formula (28 KB/token for this model). It
+ran on HuggingFace, not vLLM, because HF grows the cache organically so the curve
+and the crash are real memory events; vLLM reserves its whole pool at startup and
+would have no curve to plot.
+
+The card reached 123,565 tokens of context, then threw `CUDA out of memory`. Two
+things in the plot tell the story. First, the measured line climbs at ~60
+KB/token, more than double the analytical 28 KB/token, and rides well above the
+prediction the whole way. That gap is not overhead, it is a mechanism:
+HuggingFace reallocates the entire KV cache every single decode step. Each token
+does `torch.cat([old_cache, new_kv])`, which cannot grow a tensor in place, it
+allocates a fresh block for n+1 tokens and copies the old n in, so for that copy
+both caches are live and peak memory is weights + 2x KV, not weights + KV. The
+numbers land on it: at 120k tokens, weights + 2x KV predicts 9507 MiB and the
+card held 10,226. The textbook size was right; the naive size was just being paid
+twice.
+
+Second, the crash is a fragmentation event, not a "free bytes hit zero" event. At
+OOM, 10,437 MiB was allocated but 11,764 was reserved, so ~1.3 GiB sat free inside
+the pool yet could not be handed out: the next `cat` needed one contiguous
+2x-KV-sized slab and the free space was scattered in gaps between cache blocks
+already parked. Enough empty parking spaces in total for the bus, no single
+stretch long enough to fit it. So the wall arrives when a token needs a big
+contiguous block, earlier than raw free memory suggests.
+
+Worth stating plainly: my pre-run guess was that the card would die near 30k
+tokens. It reached 123k. The mechanism I named was right and the arithmetic was
+pessimistic, the naive headroom is roughly halved by the 2x reallocation and the
+last stretch is eaten by fragmentation. Keeping the wrong guess next to the
+measured answer is the honest version, and the better one, because the gap between
+prediction and reality has two named, quantified causes.
+
+The same `torch.cat` also explains why decode slows from ~30 tok/s to ~3 tok/s as
+context grows. Decode is memory-bound, and rewriting the whole cache every step is
+O(context) memory traffic, so at 120k a single step moves ~6 GB just to copy the
+cache, on top of the weight read. The reallocation is both the memory wall and the
+speed decay. Both are exactly what paging the cache into fixed blocks removes,
+which is where the next phase goes.
 
 ## Why the two engines differ
 
