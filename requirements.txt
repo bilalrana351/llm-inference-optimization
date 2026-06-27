@@ -31,8 +31,10 @@ matplotlib==3.9.2
 pandas==2.2.2
 
 # --- Task 2: vLLM ---
-# Installed separately on Colab. Recorded working combination (fill in after the
-# run actually succeeds on the T4):
-#   vllm==0.6.1.post2  with the torch it pulls in
-# Install line used in colab/run.ipynb:
-#   pip install vllm==0.6.1.post2
+# Installed separately into a fresh venv (/workspace/vllm-env), NOT here: vLLM is
+# binary-tied to its own torch build, so installing it into Environment A would
+# clobber the preinstalled torch 2.12. Recorded working combination on the
+# Vast.ai RTX 3060 (sm_86, CUDA 13.0):
+#   vllm==0.23.0  (v1 engine)  with torch 2.11.0+cu130 that the wheel pulls in
+# Install line used:
+#   uv pip install vllm --torch-backend=cu130

@@ -116,3 +116,24 @@ is what lets vLLM keep going while plain transformers fragments and hits the wal
 The throughput here, ~4x at batch 1, is the floor of vLLM's advantage, not the
 ceiling: continuous batching, which this benchmark deliberately does not exercise,
 is where the larger serving wins live. Those are what the later phases build.
+
+## What the PagedAttention reading names
+
+Skimming the vLLM docs and the PagedAttention paper, the useful part was that it
+puts names on exactly what the OOM run measured. The pre-paging approach gave each
+sequence one contiguous KV buffer sized to the longest length it might reach, and
+the paper splits the resulting waste three ways: reservation (space held for tokens
+not yet generated), internal fragmentation (over-allocation beyond even the max,
+the unused tail of the buffer), and external fragmentation (the contiguous holes
+left by alloc and free, which is the crash I watched, OOM with free bytes still in
+the pool because no single gap was big enough). PagedAttention slices the cache
+into fixed `block_size`-token blocks and maps each sequence's logical positions to
+physical blocks through a block table, the direct analogue of an OS page table.
+Blocks need not be contiguous with each other, only the KV inside one block is, so
+external fragmentation goes away (any freed block fits any future need) and internal
+fragmentation shrinks to at most the last partial block. The same indirection
+enables prefix sharing: two sequences with an identical prefix point their leading
+blocks at the same physical frame, and copy only when they diverge (copy-on-write),
+the same trick the OS uses for shared pages across processes. None of this is in
+the batch-1 numbers above, it is the machinery the high-batch and long-context
+wins are built on, which is where the next phase goes.
