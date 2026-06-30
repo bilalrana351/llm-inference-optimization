@@ -1,8 +1,9 @@
-"""Task 1: the HuggingFace transformers baseline (the control).
+"""Task 1: the HuggingFace transformers baseline (the control), plus the 4-bit run.
 
 The slow, readable path that every other number is measured against. It loads a
-small model in fp16, runs a warmup, then a measured run that records prefill
-latency, decode tokens/sec, and peak VRAM, and appends one row to results/.
+small model (fp16 by default, or bitsandbytes NF4 4-bit with --quant nf4), runs a
+warmup, then a measured run that records prefill latency, decode tokens/sec, and
+peak VRAM, and appends one row to results/.
 
 We drive generation by hand (prefill forward, then a greedy decode loop over the
 KV cache) instead of model.generate(), for two reasons:
@@ -11,11 +12,27 @@ KV cache) instead of model.generate(), for two reasons:
   2. It is the same loop the OOM sweep reuses, so the control and the headline
      experiment measure the identical code path.
 
+The 4-bit run reuses this identical loop on purpose: the only thing that changes
+between fp16 and NF4 is how the weights are stored, so running both through the
+same prefill/decode code is the fair comparison. The expected lesson is that
+4-bit is a memory lever, not a speed lever at batch 1: weights drop from ~2945 to
+roughly ~1.3 GB, but decode stays flat or slows down, because bitsandbytes
+dequantizes NF4 to fp16 on the fly every layer every step and decode was already
+memory-bound. The clean win is the freed VRAM, which moves the OOM cliff out.
+
 Usage:
+    # fp16 baseline (the control)
     python scripts/baseline_hf.py \
         --model Qwen/Qwen2.5-1.5B \
         --prompt-tokens 512 \
         --new-tokens 256
+
+    # 4-bit NF4, same loop, same args
+    python scripts/baseline_hf.py \
+        --model Qwen/Qwen2.5-1.5B \
+        --prompt-tokens 512 \
+        --new-tokens 256 \
+        --quant nf4
 """
 
 from __future__ import annotations
@@ -82,6 +99,13 @@ def main() -> None:
     parser.add_argument("--new-tokens", type=int, default=256)
     parser.add_argument("--csv", default="results/baseline_hf.csv")
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--quant",
+        choices=["none", "nf4"],
+        default="none",
+        help="none = fp16 baseline (the control); nf4 = bitsandbytes 4-bit NF4 "
+        "with fp16 compute dtype.",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -91,12 +115,35 @@ def main() -> None:
     device = args.device
     dev_idx = torch.device(device).index or 0
 
-    # --- load weights in fp16 ---
-    print(f"\nloading {args.model} in fp16 ...")
+    # --- load weights, fp16 or 4-bit NF4 ---
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, torch_dtype=torch.float16
-    ).to(device)
+    if args.quant == "nf4":
+        # NF4 4-bit with double quantization. compute_dtype is fp16, not bf16:
+        # the dequant-and-matmul in the decode hot loop runs in fp16 to stay
+        # comparable with the fp16 baseline and the later V100/T4 runs.
+        from transformers import BitsAndBytesConfig
+
+        print(f"\nloading {args.model} in 4-bit NF4 (fp16 compute) ...")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+        # A 4-bit model is placed by device_map at load time and cannot be moved
+        # with .to() afterward, so we pin it to the target device here instead.
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model,
+            quantization_config=bnb_config,
+            device_map={"": dev_idx},
+        )
+        dtype_label = "nf4"
+    else:
+        print(f"\nloading {args.model} in fp16 ...")
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, torch_dtype=torch.float16
+        ).to(device)
+        dtype_label = "float16"
     model.eval()
 
     # VRAM occupied by weights alone, before any KV cache exists.
@@ -125,7 +172,7 @@ def main() -> None:
     result = BenchResult(
         engine="hf",
         model=args.model,
-        dtype="float16",
+        dtype=dtype_label,
         batch_size=1,
         prompt_tokens=actual_prompt_tokens,
         new_tokens=decode_count,
@@ -141,6 +188,7 @@ def main() -> None:
 
     # --- report ---
     print("\n" + "-" * 60)
+    print(f"dtype          {dtype_label}")
     print(f"prefill        {prefill_s * 1000:8.1f} ms   ({prefill_tps:7.1f} tok/s over prompt)")
     print(f"decode         {decode_tps:8.1f} tok/s ({decode_count} tokens in {decode_s:.3f} s)")
     print(f"weights VRAM   {weights_vram:8.0f} MiB")

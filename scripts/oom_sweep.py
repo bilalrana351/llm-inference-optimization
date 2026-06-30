@@ -108,6 +108,15 @@ def main() -> None:
     parser.add_argument("--csv", default="results/oom_sweep.csv")
     parser.add_argument("--plot", default="results/oom_curve.png")
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--quant",
+        choices=["none", "nf4"],
+        default="none",
+        help="none = fp16 weights (the original cliff); nf4 = bitsandbytes 4-bit "
+        "NF4 weights, which free ~1.6 GB and push the OOM cliff out. The KV cache "
+        "itself stays fp16 either way (28 KB/token), so the slope is unchanged and "
+        "only the starting weight offset moves.",
+    )
     args = parser.parse_args()
 
     if not torch.cuda.is_available():
@@ -117,12 +126,33 @@ def main() -> None:
     device = args.device
     dev_idx = torch.device(device).index or 0
 
-    # --- load weights in fp16, the flat memory offset every curve sits on ---
-    print(f"\nloading {args.model} in fp16 ...")
+    # --- load weights, the flat memory offset every curve sits on ---
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, torch_dtype=torch.float16
-    ).to(device)
+    if args.quant == "nf4":
+        # Same NF4 config as the 4-bit baseline. Lowering the weight offset is
+        # the whole point here: the cache grows at the identical slope, so a
+        # smaller offset means more tokens fit before the card OOMs.
+        from transformers import BitsAndBytesConfig
+
+        print(f"\nloading {args.model} in 4-bit NF4 (fp16 compute) ...")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model,
+            quantization_config=bnb_config,
+            device_map={"": dev_idx},
+        )
+        dtype_label = "nf4"
+    else:
+        print(f"\nloading {args.model} in fp16 ...")
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, torch_dtype=torch.float16
+        ).to(device)
+        dtype_label = "float16"
     model.eval()
 
     torch.cuda.synchronize(dev_idx)
@@ -162,7 +192,7 @@ def main() -> None:
         result = BenchResult(
             engine="hf",
             model=args.model,
-            dtype="float16",
+            dtype=dtype_label,
             batch_size=1,
             prompt_tokens=prompt_tokens,
             new_tokens=generated,
@@ -252,11 +282,16 @@ def main() -> None:
             "--max-tokens to find the real cliff."
         )
 
-    _maybe_plot(rows, oom_seq, weights_vram, args)
+    # Do not clobber the committed fp16 curve when sweeping 4-bit: if the user
+    # left the default plot path, derive a quant-specific name.
+    if args.quant == "nf4" and args.plot == parser.get_default("plot"):
+        args.plot = args.plot.replace(".png", "_nf4.png")
+
+    _maybe_plot(rows, oom_seq, weights_vram, args, dtype_label)
     print(f"\nrows appended -> {args.csv}")
 
 
-def _maybe_plot(rows, oom_seq, weights_vram, args) -> None:
+def _maybe_plot(rows, oom_seq, weights_vram, args, dtype_label="float16") -> None:
     """Plot measured VRAM vs context with the analytical KV line overlaid.
 
     Guarded by the matplotlib import: the CSV is the real artifact and is always
@@ -290,7 +325,7 @@ def _maybe_plot(rows, oom_seq, weights_vram, args) -> None:
     ax.set_xlabel("context length (tokens)")
     ax.set_ylabel("GPU memory (MiB)")
     ax.set_title(
-        "KV cache hits the wall: Qwen2.5-1.5B fp16, RTX 3060 12GB, HF transformers\n"
+        f"KV cache hits the wall: Qwen2.5-1.5B {dtype_label}, RTX 3060 12GB, HF transformers\n"
         "grown by decode (1 token/step), so peak = weights + KV + tiny constant"
     )
     ax.legend(loc="upper left", fontsize=8)

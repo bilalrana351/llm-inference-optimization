@@ -30,6 +30,17 @@ safetensors==0.4.4
 matplotlib==3.9.2
 pandas==2.2.2
 
+# --- 4-bit quantization (Week 3, the FP16-vs-NF4 experiment) ---
+# bitsandbytes goes into Environment A (the HF venv on torch 2.12), since the
+# 4-bit baseline runs through the transformers path. It ships compiled CUDA
+# kernels, and CUDA 13.0 is new, so a matching prebuilt wheel may lag. Do NOT pin
+# blindly: install the latest wheel on the box, confirm `python -c "import
+# bitsandbytes"` succeeds and a --quant nf4 run works, then record the working
+# version here (same discipline as the vLLM pin below).
+# Install line to try first:
+#   pip install -U bitsandbytes
+# Working version on the Vast.ai RTX 3060 (sm_86, CUDA 13.0): TODO, fill after run.
+
 # --- Task 2: vLLM ---
 # Installed separately into a fresh venv (/workspace/vllm-env), NOT here: vLLM is
 # binary-tied to its own torch build, so installing it into Environment A would
