@@ -37,9 +37,14 @@ pandas==2.2.2
 # blindly: install the latest wheel on the box, confirm `python -c "import
 # bitsandbytes"` succeeds and a --quant nf4 run works, then record the working
 # version here (same discipline as the vLLM pin below).
-# Install line to try first:
-#   pip install -U bitsandbytes
-# Working version on the Vast.ai RTX 3060 (sm_86, CUDA 13.0): TODO, fill after run.
+# Install line used:
+#   uv pip install -U bitsandbytes
+# Working version on the Vast.ai RTX 3060 (sm_86, CUDA 13.0): bitsandbytes==0.49.2
+# Side effect: pulling bitsandbytes bumped torch from 2.12.0+cu130 to
+# 2.12.1+cu130 (uv resolved a newer patch release as a dependency). Still the
+# same cu130 build, confirmed with a CUDA matmul and a real --quant nf4 run
+# through scripts/baseline_hf.py after the bump.
+bitsandbytes==0.49.2
 
 # --- Task 2: vLLM ---
 # Installed separately into a fresh venv (/workspace/vllm-env), NOT here: vLLM is
