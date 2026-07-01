@@ -178,45 +178,55 @@ wins are built on, which the next section starts to measure.
 
 ## Batching: the throughput the floor was hiding
 
-(Draft, pending the box run. The mechanism is written; the numbers are marked
-TODO until the sweep runs.)
+(Draft. The realistic-pool sweep is measured and below; the constrained-pool run
+that forces the KV wall, and the plots, are still pending.)
 
 Batch 1 wastes the GPU. The decode step reads the entire weight matrix to advance
 one sequence by one token, arithmetic intensity ~1, so the tensor cores sit nearly
 idle while the memory pipe does all the work. The obvious lever is to make that
-same weight read serve more than one sequence: send many sequences at once and let
-each decode step advance all of them together. That is batching, and vLLM's paged
-pool is what lets many sequences share one reserved KV space without fragmenting.
-So the question this experiment answers is: how much throughput does batching buy
-before the GPU stops giving it back, and what does it cost in latency.
+same weight read serve more than one sequence: send many at once and let each
+decode step advance all of them together. The method is one `generate` call with N
+identical sequences, swept over growing N, on the same 512-token prompt and 256
+output tokens as every run above.
 
-The method is one `generate` call with N identical sequences, swept over growing
-N, on the same 512-token prompt and 256 output tokens as every run above. One
-subtlety that separates this from the OOM experiment: vLLM reserves its whole KV
-pool at startup, so device VRAM is flat the entire sweep. The KV-cache limit does
-not show up as memory climbing to a wall; it shows up as vLLM queuing sequences it
-cannot fit and running them in later waves. To make that limit visible on a card
-where a 1.5B model otherwise fits hundreds of short sequences, the sweep runs
-twice: once with the full 90% pool, and once with a deliberately shrunk pool, the
-same reason the OOM experiment wanted a small card.
+The measured decode throughput climbs steeply and then simply stops:
 
-Three regions are expected in the curve:
+| batch | 1 | 8 | 32 | 64 | 128 | 256 |
+| --- | --- | --- | --- | --- | --- | --- |
+| decode tok/s | 89 | 501 | 1499 | 2696 | 2879 | 2967 |
+| per-token latency (ms) | 11 | 16 | 21 | 24 | 44 | 86 |
 
-- **Memory-bound, the free lunch (batch 1 to ~TODO).** Throughput climbs almost
-  linearly with batch size while per-token latency barely moves, because the
-  weight read that dominated batch-1 decode is now amortized across every sequence
-  in the batch for no extra memory traffic.
-- **Compute-bound (~TODO to ~TODO).** Once the batched matmul is wide enough to
-  keep the tensor cores busy, each added sequence costs real compute. Throughput
-  growth flattens and per-token latency starts to climb. On this card the bend is
-  expected to come from here, not from memory.
-- **KV-cache wall (~TODO, analytical ~TODO sequences).** When the concurrent
-  sequences need more KV blocks than the pool holds, vLLM queues the overflow.
-  Submitted-batch throughput flattens hard, a distinct kink rather than a smooth
-  bend, and per-request latency diverges as queued sequences wait. The constrained
-  pool is what brings this into view at a low, cheap batch size.
+Throughput rises ~30x from batch 1 to 64, then gains almost nothing to batch 256
+while latency climbs 3.6x. The sweet spot is ~64. The shape falls out of one
+equation. A decode step costs a fixed part plus a per-sequence part:
+`step_time = T_fixed + c1 x batch`, where `T_fixed` ~ 11 ms is the shared weight
+read (paid once no matter the batch) and `c1` ~ 0.2 ms is what each added sequence
+costs (its own KV read, its slice of the matmul). Throughput is
+`batch / (T_fixed + c1 x batch)`. While the fixed weight read dominates, throughput
+rises almost linearly, the free lunch of spreading one weight read over more
+tokens. Once `c1 x batch` dominates, throughput flattens at `1 / c1`, because a
+step whose time is proportional to the tokens in it has a pinned tokens-per-second.
+Throughput ever rose only because there was a fixed cost to amortize; past ~64
+there is nothing left to spread.
 
-TODO: throughput-vs-batch, latency-vs-batch, and the throughput-vs-latency
-tradeoff plots, plus the measured breakpoints, once the sweep has run. The
-batch-1 point doubles as a sanity check: it must land on the ~79.9 tok/s decode
-throughput the vLLM baseline already recorded.
+The surprise is what the plateau is *not*. At batch 256 the card is doing ~9
+TFLOPS (about 16% of its ~51 TFLOPS peak) and moving ~90 GB/s (about 25% of its
+360 GB/s). Neither roofline is saturated, yet throughput will not rise. The reason
+is operation shape: batched decode is a skinny matmul (M = batch = 64 to 256),
+which is occupancy-bound and tops out far below tensor-core peak, while the paged
+KV reads run at a fraction of bandwidth. The plateau is the ceiling of these
+particular kernels, not of the GPU. Which is exactly why prefill is different:
+prefill processes 512 positions at once, so its matmuls are M = 512, fat and dense,
+and reach ~68% of compute. Prefill is just batching over positions instead of over
+sequences, and the fatter GEMM is why it hits the compute the decode plateau
+cannot. The full decomposition, the roofline (theoretical ideal batch ~140 vs
+measured ~64) and the cross-GPU prediction for a higher-bandwidth card, is in
+`docs/batching-results.md`.
+
+One subtlety separates the KV wall here from the OOM experiment: vLLM reserves its
+whole KV pool at startup, so device VRAM is flat the entire sweep. The limit does
+not show up as memory climbing; it shows up as vLLM queuing sequences it cannot fit
+and running them in later waves. On the full 90% pool a 1.5B model fits ~309 short
+sequences, well past where throughput already flattened, so the wall never bit. The
+pending constrained-pool run shrinks the pool deliberately to bring the wall into
+view at a low batch, the same reason the OOM experiment wanted a small card.
