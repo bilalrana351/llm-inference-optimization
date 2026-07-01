@@ -178,8 +178,8 @@ wins are built on, which the next section starts to measure.
 
 ## Batching: the throughput the floor was hiding
 
-(Draft. The realistic-pool sweep is measured and below; the constrained-pool run
-that forces the KV wall, and the plots, are still pending.)
+(Draft. Realistic and constrained sweeps measured on the 3060, plus a 3090
+cross-check; the overlay plots are still pending.)
 
 Batch 1 wastes the GPU. The decode step reads the entire weight matrix to advance
 one sequence by one token, arithmetic intensity ~1, so the tensor cores sit nearly
@@ -219,14 +219,29 @@ particular kernels, not of the GPU. Which is exactly why prefill is different:
 prefill processes 512 positions at once, so its matmuls are M = 512, fat and dense,
 and reach ~68% of compute. Prefill is just batching over positions instead of over
 sequences, and the fatter GEMM is why it hits the compute the decode plateau
-cannot. The full decomposition, the roofline (theoretical ideal batch ~140 vs
-measured ~64) and the cross-GPU prediction for a higher-bandwidth card, is in
-`docs/batching-results.md`.
+cannot. The full decomposition and the roofline (theoretical ideal batch ~140 vs
+measured ~64) are in `docs/batching-results.md`.
 
-One subtlety separates the KV wall here from the OOM experiment: vLLM reserves its
-whole KV pool at startup, so device VRAM is flat the entire sweep. The limit does
-not show up as memory climbing; it shows up as vLLM queuing sequences it cannot fit
-and running them in later waves. On the full 90% pool a 1.5B model fits ~309 short
-sequences, well past where throughput already flattened, so the wall never bit. The
-pending constrained-pool run shrinks the pool deliberately to bring the wall into
-view at a low batch, the same reason the OOM experiment wanted a small card.
+The knee is a property of the model, not the GPU, and a second card proves it. Run
+the same sweep on an RTX 3090 (2.6x the bandwidth, 1.4x the compute) and every
+throughput number scales up, but the knee does not move: latency stays flat through
+batch 64 on both cards, then breaks upward at 96 on both. Decode throughput goes
+from ~89 to ~210 tok/s at batch 1 and from ~2970 to ~10,100 at the plateau, so the
+3090 is ~2.4x to 3.4x faster, yet the sweet spot is still ~64. That is the
+weight-read-versus-KV-read crossover: it depends on the model's weight size and
+per-sequence KV, which are identical on both cards. The plateau *height* scaled a
+bit more than bandwidth alone (3.4x vs 2.6x) because the 3090's extra compute also
+lifts the skinny-GEMM ceiling, but the plateau *location* is fixed by the model.
+
+The other ceiling is the KV cache itself, and it looks nothing like the OOM run.
+vLLM reserves its whole KV pool at startup, so device VRAM is flat the entire
+sweep. The limit shows up not as memory climbing but as vLLM queuing sequences it
+cannot fit and running them in later waves. Shrinking the pool on the 3060 so it
+holds only 25 sequences makes this bite early: past batch 25 the `queued` flag
+flips, decode throughput pins at ~1000 tok/s (a third of the unconstrained ~2700)
+no matter how many more sequences you submit, and latency climbs as the queued
+requests wait. So there are two different plateaus. One is a compute-efficiency
+ceiling where every sequence still runs; the other is a KV-admission ceiling where
+the surplus queues. The first is about how fast the kernels go, the second about how
+many sequences fit, and telling them apart is the whole reason for running the pool
+constrained as well as full.

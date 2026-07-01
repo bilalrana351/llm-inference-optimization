@@ -109,8 +109,44 @@ match. Worth reconciling on the next run (the baseline was median-of-3 at a
 slightly different point in the session); the shape of the sweep does not depend
 on it, but the discrepancy should not be swept under the rug.
 
-Constrained-pool run (forces the KV wall at low batch) and the plots are still
-pending: `results/vllm_batch_throughput.png`, `vllm_batch_latency.png`,
+## Measured: the constrained pool (the KV wall)
+
+Same 3060, `gpu_memory_utilization=0.4`, `num_gpu_blocks=1224`, analytical KV
+capacity **25 sequences**. Deliberately tiny pool so the wall bites well below the
+compute knee (~64).
+
+| batch | decode tok/s | TPOT ms | queued |
+| --- | --- | --- | --- |
+| 8 | 501 | 16.0 | False |
+| 16 | 937 | 17.1 | False |
+| 32 | 965 | 33.2 | **True** |
+| 48 | 1093 | 43.9 | **True** |
+| 64 | 950 | 67.4 | **True** |
+
+`queued` flips True at batch 32 (past cap 25). From there decode throughput **pins
+at ~1000 tok/s** (the throughput of ~25 concurrent sequences) while TPOT climbs
+linearly (33 -> 44 -> 67 ms). Against the realistic pool at the same batches (1499
+/ 2064 / 2697), the wall cut throughput to roughly a third and inflated latency,
+because vLLM admits only ~25 sequences and runs the rest in later waves.
+
+This is the key contrast: **there are two different plateaus.**
+
+- **Realistic pool:** throughput flattens at ~2700 tok/s at batch 64. A
+  *compute/efficiency* ceiling. All sequences run concurrently; latency climbs
+  smoothly. Memory flat because the pool is pre-reserved.
+- **Constrained pool:** throughput flattens at ~1000 tok/s at batch 25-32. A
+  *KV-admission* ceiling. Extra requests queue and run in waves; latency inflates
+  faster. It bit *before* the compute knee because capacity (25) < knee (64).
+
+The wall is invisible in device memory (pool pre-reserved, `device_used_mib` flat
+across it), unlike the HF OOM run where memory climbed to the wall. Here it shows
+only as throughput flattening, the `queued` flag, and TPOT inflation. Note
+`p95_latency` came out NaN: `RequestOutput.metrics` did not populate on this vLLM
+build (0.23.0), so the per-request latency-divergence signal is unavailable and
+the aggregate TPOT inflation (33 -> 67 ms past the wall) stands in for it.
+
+Plots overlaying the three configs are still pending:
+`results/vllm_batch_throughput.png`, `vllm_batch_latency.png`,
 `vllm_batch_tradeoff.png`.
 
 ## The three-part memory model
@@ -236,27 +272,47 @@ crossover a memory-vs-memory event (weight read vs KV read) rather than a comput
 event. The gap between the idealized ridge and the measured knee is itself a
 result: it is the cost of imperfect kernels and unshared KV traffic.
 
-## Cross-GPU prediction (RTX 3090 hypothesis, to test)
+## Cross-GPU result (RTX 3090, hypothesis confirmed)
 
 The 3090 has ~936 GB/s bandwidth (2.6x the 3060's 360) and ~71 TFLOPS fp16 tensor
-(1.4x the 3060's ~51). Because both `T_fixed` (weight read) and `c1` (KV read)
-scale as 1 / bandwidth, the falsifiable predictions are:
+(1.4x the 3060's ~51). The prediction was: throughput scales up with bandwidth, but
+the knee stays put because it is a model property. Measured (realistic pool,
+`gpu_memory_utilization=0.9`, `num_gpu_blocks=39834`, KV capacity ~829):
 
-- **Throughput up ~2 to 2.6x at every batch**, plateau near ~6000-7000 tok/s.
-  Throughput tracks bandwidth, and the 3090 has much more of it.
-- **Latency down ~2.6x**, especially at low batch, because the fixed weight read
-  drops from ~8.6 ms to ~3.3 ms.
-- **Optimal batch stays in the same ballpark (~64), possibly slightly lower, not
-  higher.** This is the counterintuitive one. The compute-roofline ridge is
-  actually *lower* on the 3090 (`71 / 936 ~ 76` vs `51 / 360 ~ 142`) because its
-  bandwidth grew more than its compute, so relative to itself it is more
-  memory-rich and goes compute-bound sooner. And since the measured knee (64) is
-  already below the compute ridge, the knee is set by the weight-read-vs-KV-read
-  crossover, which is `weight_bytes / KV_bytes_per_sequence`: a property of the
-  *model*, not the GPU, and roughly bandwidth-invariant. If the 3090's knee jumps
-  to ~150, this model is wrong and we learn something. If it stays ~64 with ~2.5x
-  higher throughput, the model holds.
+| batch | 3060 decode t/s | 3090 decode t/s | ratio | 3060 TPOT | 3090 TPOT |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 89 | 210 | 2.36x | 11.3 | 4.8 |
+| 8 | 501 | 1392 | 2.78x | 16.0 | 5.7 |
+| 32 | 1499 | 4845 | 3.23x | 21.4 | 6.6 |
+| 64 | 2697 | 8127 | 3.01x | 23.7 | 7.9 |
+| 96 | 2608 | 8583 | - | 36.8 | 11.2 |
+| 256 | 2967 | 10112 | 3.41x | 86.3 | 25.3 |
 
-Other cards worth the same sweep: T4 (65 TFLOPS / 320 GB/s, ridge ~200) and V100
-(125 TFLOPS / 900 GB/s, ridge ~140) on the NUST HPC cluster, since they are
-already the roadmap hardware and bracket the 3060 on both axes.
+What held:
+
+- **The knee stayed at ~64 on both cards.** TPOT is flat through batch 64 on both
+  (3060: 11 -> 24 ms; 3090: 4.8 -> 7.9 ms) then jumps hard at 96 (3060 -> 37, 3090
+  -> 11.2). The optimal batch did not move despite 2.6x more bandwidth. This is the
+  falsifiable prediction confirmed: the knee is the weight-read-vs-KV-read
+  crossover, a property of the model, not the GPU.
+- **Latency dropped ~2.4x at low batch** (4.8 vs 11.3 ms at batch 1), tracking
+  bandwidth as predicted (the fixed weight read is ~2.6x cheaper).
+
+What the prediction got wrong, and the refinement:
+
+- I predicted the plateau at ~6000-7000 tok/s. Actual is **~10,100**, a 3.4x gain,
+  more than the 2.6x bandwidth ratio. The reason is instructive: the plateau is not
+  purely bandwidth-bound. The 3090's extra 1.4x compute also lifts the skinny-GEMM
+  ceiling, so it keeps extracting throughput past batch 64 (its roll-off is softer:
+  8127 -> 10112 from 64 to 256, where the 3060 was flat 2697 -> 2967). So the knee
+  *location* is a model property (confirmed), but the plateau *height* depends on
+  both bandwidth and compute. The bandwidth-only estimate was a floor, not the
+  answer.
+
+No 3090 constrained run yet: on the 24GB card, `gpu_memory_utilization=0.4` gives
+KV capacity ~829, far past the knee, so it would not force the wall. A 3090 KV-wall
+run needs `gpu_memory_utilization` ~0.18-0.20. Other cards worth the same sweep: T4
+(65 TFLOPS / 320 GB/s) and V100 (125 TFLOPS / 900 GB/s) on the NUST HPC cluster,
+already roadmap hardware, bracketing the 3060 on both axes. The V100 is the sharper
+test: high bandwidth relative to compute, so the model predicts the knee holds
+near ~64 there too.
