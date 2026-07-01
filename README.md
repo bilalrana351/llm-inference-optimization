@@ -16,6 +16,8 @@ scripts/
   baseline_hf.py             Task 1: HuggingFace transformers baseline (the control)
   bench_vllm.py              Task 2: vLLM, same model and workload
   oom_sweep.py               Task 3: the KV-cache OOM experiment
+  bench_vllm_batch.py        Week 3: vLLM batching throughput/latency sweep
+  plot_batch_sweep.py        plots for the batching sweep
   analyze_vram_deviations.py per-step VRAM delta reader for the OOM CSV
 results/                     raw CSV logs and plots
 docs/                        per-task writeups (baseline, vLLM, OOM) and the compute record
@@ -49,9 +51,21 @@ Uses the preinstalled torch 2.12. Just add the baseline pins:
 
 ```bash
 export HF_HOME=/workspace/hf-cache          # cache weights on persistent storage
-pip install -r requirements.txt             # transformers, accelerate, matplotlib, pandas
+pip install -r requirements.txt             # transformers, accelerate, bitsandbytes, matplotlib, pandas
 python scripts/baseline_hf.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 --new-tokens 256
 ```
+
+The same script runs the 4-bit NF4 comparison through the identical prefill/decode
+loop, so the only change is how the weights are stored:
+
+```bash
+python scripts/baseline_hf.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 --new-tokens 256 --quant nf4
+```
+
+The lesson is that 4-bit is a memory lever, not a speed lever at batch 1: weights
+drop from ~2945 to ~1099 MiB, but decode slows (bitsandbytes dequantizes NF4 to
+fp16 every layer every step, and decode was already memory-bound). The freed VRAM
+is the win, and it moves the OOM cliff out.
 
 The OOM sweep (Task 3) also runs in Environment A, because HF grows the cache
 organically so the crash is a real memory event:
@@ -78,6 +92,28 @@ source /workspace/vllm-env/bin/activate
 uv pip install vllm --torch-backend=cu130
 python scripts/bench_vllm.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 --new-tokens 256
 ```
+
+The batching throughput sweep (Week 3) also runs in Environment B. It sends a
+growing number of concurrent sequences to vLLM and measures throughput and
+latency at each batch size. Run it twice: a realistic pool to find where compute
+saturates, and a deliberately constrained pool to force the KV-cache wall at a low
+batch size. Then plot:
+
+```bash
+# realistic pool: throughput climbs then flattens from the compute ceiling
+python scripts/bench_vllm_batch.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 \
+    --new-tokens 256 --gpu-mem-util 0.9 --sweep 1,2,4,8,16,32,48,64,96,128,192,256 \
+    --repeats 2 --tag realistic
+# constrained pool: small KV pool so the wall bites early and requests queue
+python scripts/bench_vllm_batch.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 \
+    --new-tokens 256 --gpu-mem-util 0.4 --sweep 1,2,4,8,16,32,48,64 \
+    --repeats 2 --tag constrained
+python scripts/plot_batch_sweep.py
+```
+
+Throughput is total output tokens across the batch divided by wall time, never
+blended with the batch-1 decode rate. `ignore_eos` forces exactly the requested
+output length per sequence, so total output equals batch x output length.
 
 ## Constraints
 

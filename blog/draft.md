@@ -54,6 +54,10 @@ ran on HuggingFace, not vLLM, because HF grows the cache organically so the curv
 and the crash are real memory events; vLLM reserves its whole pool at startup and
 would have no curve to plot.
 
+![Measured VRAM vs context length on the RTX 3060: the measured line climbs at
+~60 KB/token, rides well above the 28 KB/token analytical prediction, and the card
+throws CUDA out of memory at 123,565 tokens.](../results/oom_curve.png)
+
 The card reached 123,565 tokens of context, then threw `CUDA out of memory`. Two
 things in the plot tell the story. First, the measured line climbs at ~60
 KB/token, more than double the analytical 28 KB/token, and rides well above the
@@ -88,6 +92,40 @@ cache, on top of the weight read. The reallocation is both the memory wall and t
 speed decay. Both are exactly what paging the cache into fixed blocks removes,
 which is where the next phase goes.
 
+## The 4-bit lever: memory, not speed
+
+If the wall is memory, the obvious lever is to make the weights smaller. Loading
+the same model in 4-bit (bitsandbytes NF4, fp16 compute) and running it through the
+identical prefill/decode loop isolates exactly one change: how the weights are
+stored. Same 512-token prompt, same 255 decoded tokens, batch 1.
+
+| metric | fp16 | NF4 4-bit |
+| --- | --- | --- |
+| prefill | ~122 ms (4205 tok/s over the prompt) | ~140 ms (3655 tok/s) |
+| decode tokens/sec | ~28.1 | ~12.4 |
+| weights VRAM | 2945 MiB | 1099 MiB |
+
+The asymmetry mirrors the HF-vs-vLLM split, and for the same reason. Prefill takes
+only a ~13% hit, but decode is ~2.3x *slower*. The instinct is that 4-bit should
+make decode faster, since decode is memory-bound and 4-bit weights are a quarter of
+the bytes. It does not, because bitsandbytes does not run a native 4-bit matmul. It
+reads the 4-bit weights, dequantizes them back to fp16, and runs the ordinary fp16
+GEMM, so the matmul reads fp16-width data either way and there is no bandwidth
+saving where it would count. The dequant is strictly extra work. In prefill that
+work is amortized over 512 positions and hidden behind the compute, so NF4 nearly
+keeps up. In decode, batch 1 and arithmetic intensity ~1, there is nothing to
+amortize over and no compute to hide behind, so the dequant pass lands directly on
+per-token latency and more than doubles it.
+
+So NF4 is a memory lever, not a speed lever at this batch size. The payoff is the
+weights row: 2945 to 1099 MiB, about 1.8 GiB freed. That ties straight back to the
+OOM curve. At the observed ~60 KB/token growth rate, 1.8 GiB of headroom is on the
+order of 30k more tokens of context before the same wall, bought by giving up decode
+throughput. (The paired lesson to keep honest: a native 4-bit kernel that stayed in
+low precision through the matmul, like the int4 kernels vLLM can use, would cut the
+matmul's memory traffic and could flip decode the other way. The dequant-to-fp16
+path is why bitsandbytes does not.)
+
 ## Why the two engines differ
 
 The gap is a scheduling problem, not an arithmetic one. The GPU runs kernels; the
@@ -114,8 +152,8 @@ reserved pool. That buys high-batch throughput and long context, not single-stre
 decode speed. Its payoff shows up in the next section, where the same paged pool
 is what lets vLLM keep going while plain transformers fragments and hits the wall.
 The throughput here, ~4x at batch 1, is the floor of vLLM's advantage, not the
-ceiling: continuous batching, which this benchmark deliberately does not exercise,
-is where the larger serving wins live. Those are what the later phases build.
+ceiling: continuous batching, which the batching sweep below measures directly, is
+where the larger serving wins live. Those are what the later phases build.
 
 ## What the PagedAttention reading names
 
@@ -136,4 +174,49 @@ enables prefix sharing: two sequences with an identical prefix point their leadi
 blocks at the same physical frame, and copy only when they diverge (copy-on-write),
 the same trick the OS uses for shared pages across processes. None of this is in
 the batch-1 numbers above, it is the machinery the high-batch and long-context
-wins are built on, which is where the next phase goes.
+wins are built on, which the next section starts to measure.
+
+## Batching: the throughput the floor was hiding
+
+(Draft, pending the box run. The mechanism is written; the numbers are marked
+TODO until the sweep runs.)
+
+Batch 1 wastes the GPU. The decode step reads the entire weight matrix to advance
+one sequence by one token, arithmetic intensity ~1, so the tensor cores sit nearly
+idle while the memory pipe does all the work. The obvious lever is to make that
+same weight read serve more than one sequence: send many sequences at once and let
+each decode step advance all of them together. That is batching, and vLLM's paged
+pool is what lets many sequences share one reserved KV space without fragmenting.
+So the question this experiment answers is: how much throughput does batching buy
+before the GPU stops giving it back, and what does it cost in latency.
+
+The method is one `generate` call with N identical sequences, swept over growing
+N, on the same 512-token prompt and 256 output tokens as every run above. One
+subtlety that separates this from the OOM experiment: vLLM reserves its whole KV
+pool at startup, so device VRAM is flat the entire sweep. The KV-cache limit does
+not show up as memory climbing to a wall; it shows up as vLLM queuing sequences it
+cannot fit and running them in later waves. To make that limit visible on a card
+where a 1.5B model otherwise fits hundreds of short sequences, the sweep runs
+twice: once with the full 90% pool, and once with a deliberately shrunk pool, the
+same reason the OOM experiment wanted a small card.
+
+Three regions are expected in the curve:
+
+- **Memory-bound, the free lunch (batch 1 to ~TODO).** Throughput climbs almost
+  linearly with batch size while per-token latency barely moves, because the
+  weight read that dominated batch-1 decode is now amortized across every sequence
+  in the batch for no extra memory traffic.
+- **Compute-bound (~TODO to ~TODO).** Once the batched matmul is wide enough to
+  keep the tensor cores busy, each added sequence costs real compute. Throughput
+  growth flattens and per-token latency starts to climb. On this card the bend is
+  expected to come from here, not from memory.
+- **KV-cache wall (~TODO, analytical ~TODO sequences).** When the concurrent
+  sequences need more KV blocks than the pool holds, vLLM queues the overflow.
+  Submitted-batch throughput flattens hard, a distinct kink rather than a smooth
+  bend, and per-request latency diverges as queued sequences wait. The constrained
+  pool is what brings this into view at a low, cheap batch size.
+
+TODO: throughput-vs-batch, latency-vs-batch, and the throughput-vs-latency
+tradeoff plots, plus the measured breakpoints, once the sweep has run. The
+batch-1 point doubles as a sanity check: it must land on the ~79.9 tok/s decode
+throughput the vLLM baseline already recorded.
