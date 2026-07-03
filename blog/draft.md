@@ -178,9 +178,6 @@ wins are built on, which the next section starts to measure.
 
 ## Batching: the throughput the floor was hiding
 
-(Draft. Realistic and constrained sweeps measured on the 3060, plus a 3090
-cross-check; the overlay plots are still pending.)
-
 Batch 1 wastes the GPU. The decode step reads the entire weight matrix to advance
 one sequence by one token, arithmetic intensity ~1, so the tensor cores sit nearly
 idle while the memory pipe does all the work. The obvious lever is to make that
@@ -232,6 +229,27 @@ weight-read-versus-KV-read crossover: it depends on the model's weight size and
 per-sequence KV, which are identical on both cards. The plateau *height* scaled a
 bit more than bandwidth alone (3.4x vs 2.6x) because the 3090's extra compute also
 lifts the skinny-GEMM ceiling, but the plateau *location* is fixed by the model.
+
+| batch | 3060 tok/s | 3090 tok/s | ratio | 3060 TPOT (ms) | 3090 TPOT (ms) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 89 | 210 | 2.4x | 11.3 | 4.8 |
+| 8 | 501 | 1393 | 2.8x | 16.0 | 5.7 |
+| 32 | 1499 | 4845 | 3.2x | 21.4 | 6.6 |
+| 64 | 2696 | 8127 | 3.0x | 23.7 | 7.9 |
+| 96 | 2608 | 8583 | 3.3x | 36.8 | 11.2 |
+| 256 | 2967 | 10112 | 3.4x | 86.3 | 25.3 |
+
+The overlay makes the two claims one picture: the lines separate vertically (the
+3090 delivers more throughput at every batch) but bend at the same place (the knee
+does not slide right with the faster card). The 3090's line keeps climbing past 64
+where the 3060's has gone flat, which is the extra compute lifting the plateau, not
+the knee moving.
+
+![Decode throughput vs batch size for three configs on one axis: 3090 realistic,
+3060 realistic, and 3060 constrained. The two realistic lines both bend near batch
+64 but the 3090 sits far above the 3060 and keeps rising to ~10,100 tok/s at batch
+256 while the 3060 plateaus near ~2900. The constrained 3060 line pins at ~1000
+tok/s once it crosses its KV wall at ~25 sequences.](../results/vllm_batch_throughput.png)
 
 The other ceiling is the KV cache itself, and it looks nothing like the OOM run.
 vLLM reserves its whole KV pool at startup, so device VRAM is flat the entire

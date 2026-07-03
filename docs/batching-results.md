@@ -145,9 +145,12 @@ only as throughput flattening, the `queued` flag, and TPOT inflation. Note
 build (0.23.0), so the per-request latency-divergence signal is unavailable and
 the aggregate TPOT inflation (33 -> 67 ms past the wall) stands in for it.
 
-Plots overlaying the three configs are still pending:
-`results/vllm_batch_throughput.png`, `vllm_batch_latency.png`,
-`vllm_batch_tradeoff.png`.
+Plots overlaying the three configs (3060 realistic, 3060 constrained, 3090
+realistic) are in `results/vllm_batch_throughput.png`, `vllm_batch_latency.png`,
+and `vllm_batch_tradeoff.png`. The throughput overlay is the clearest read: the
+two realistic lines both bend near batch 64 while sitting far apart vertically (the
+knee is fixed by the model, the height by the card), and the constrained line pins
+flat once it crosses its KV wall at ~25 sequences.
 
 ## The three-part memory model
 
