@@ -12,8 +12,8 @@ Budget for the LLM inference track this week is about 30 to 32 hours. Roughly 18
 
 ## Part B: begin Phase 2, the GPU itself, about 10 to 12 hours
 
-- [ ] **Stanford CS149 first block (about 8 hours).** Watch the opening lectures on the execution model: the modern multi-core processor (ILP, SIMD, hardware multithreading), the parallel programming abstractions, and the GPU architecture and memory hierarchy. Take light notes. This is the why behind the numbers you just measured: it explains why decode is memory-bound and why batch 1 leaves the GPU idle.
+- [x] **Stanford CS149 first block (about 8 hours).** Watch the opening lectures on the execution model: the modern multi-core processor (ILP, SIMD, hardware multithreading), the parallel programming abstractions, and the GPU architecture and memory hierarchy. Take light notes. This is the why behind the numbers you just measured: it explains why decode is memory-bound and why batch 1 leaves the GPU idle.
 
-- [ ] **GPU MODE lecture 1 (about 2 hours).** Watch lecture 1 to anchor the practical profiling and PyTorch-to-kernel framing. Notes only, no kernel writing.
+- [x] **GPU MODE lecture 1 (about 2 hours).** Watch lecture 1 to anchor the practical profiling and PyTorch-to-kernel framing. Notes only, no kernel writing.
 
 - [ ] **No kernel writing this week.** Triton and CUDA kernels are Phase 3. The Phase 2 gate (read a kernel and explain why it is fast or slow, in terms of coalescing, shared vs global memory, and occupancy) is the mid-August target, not this week. Week 3 only builds the mental model that the gate will test.
