@@ -4,11 +4,11 @@ Budget for the LLM inference track this week is about 30 to 32 hours, all techni
 
 ## Part A: consolidate, about 6 to 8 hours
 
-- [ ] **GPU MODE lecture 8, CUDA Performance Checklist (about 3 hours).** The best single consolidation of everything Phase 2 tests: coalescing, occupancy, memory-vs-compute bound, and the usual ways a kernel leaves performance on the table. This is the checklist you will run in your head during Phase 3.
+- [x] **GPU MODE lecture 8, CUDA Performance Checklist (about 3 hours).** The best single consolidation of everything Phase 2 tests: coalescing, occupancy, memory-vs-compute bound, and the usual ways a kernel leaves performance on the table. This is the checklist you will run in your head during Phase 3.
 
 - [ ] **GPU MODE lecture 9, parallel reduction, if time (about 2 hours).** Control divergence, memory divergence, minimizing global-memory access, and thread coarsening, shown on a reduction. Optional but high-value, these are the exact failure modes the gate asks you to name.
 
-- [ ] **Close the PMPP chapter 4 to 6 gaps (about 2 hours).** Anything from last week's reference reading that is still fuzzy: the occupancy math, the tiling walk-through, the coalescing rules. Do not start new chapters.
+- [x] **Close the PMPP chapter 4 to 6 gaps (about 2 hours).** Anything from last week's reference reading that is still fuzzy: the occupancy math, the tiling walk-through, the coalescing rules. Do not start new chapters.
 
 ## Part B: the gate, about 8 to 10 hours
 

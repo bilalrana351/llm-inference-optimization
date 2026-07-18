@@ -4,19 +4,19 @@ Budget for the LLM inference track this week is about 30 to 32 hours, all techni
 
 ## Part A: finish the CS149 execution-model core, about 8 to 10 hours
 
-- [ ] **CS149 Lecture 5, Performance Optimization I (about 4 hours).** Work distribution and scheduling: good work distribution while keeping overhead low, and work-stealing schedulers. This is the first half of the "why a kernel is slow" answer, uneven work and idle units.
+- [x] **CS149 Lecture 5, Performance Optimization I (about 4 hours).** Work distribution and scheduling: good work distribution while keeping overhead low, and work-stealing schedulers. This is the first half of the "why a kernel is slow" answer, uneven work and idle units.
 
-- [ ] **CS149 Lecture 6, Performance Optimization II (about 4 hours).** Locality, communication, and contention: arithmetic intensity, pipelining, and avoiding contention. Arithmetic intensity here is the same quantity you computed in the batching roofline, so the lecture just puts a name on what you already measured. Light notes on both.
+- [x] **CS149 Lecture 6, Performance Optimization II (about 4 hours).** Locality, communication, and contention: arithmetic intensity, pipelining, and avoiding contention. Arithmetic intensity here is the same quantity you computed in the batching roofline, so the lecture just puts a name on what you already measured. Light notes on both.
 
 ## Part B: GPU MODE plus PMPP, the gate vocabulary, about 10 to 12 hours
 
-- [ ] **GPU MODE lectures 2 and 3 (about 3 hours).** Lecture 2 recaps PMPP chapters 1 to 3 with the CUDA C basics (heterogeneous computing, data parallelism, thread organization, memory). Lecture 3 is the same ideas written from PyTorch, so kernels compile and run from Python. Watch these fast, they are foundation.
+- [x] **GPU MODE lectures 2 and 3 (about 3 hours).** Lecture 2 recaps PMPP chapters 1 to 3 with the CUDA C basics (heterogeneous computing, data parallelism, thread organization, memory). Lecture 3 is the same ideas written from PyTorch, so kernels compile and run from Python. Watch these fast, they are foundation.
 
-- [ ] **GPU MODE lecture 4, Compute and Memory Basics (about 3 hours).** Compute architecture, memory management, and the first real optimizations: kernel fusion, tiling, and occupancy. This is a gate lecture, so slow down here.
+- [x] **GPU MODE lecture 4, Compute and Memory Basics (about 3 hours).** Compute architecture, memory management, and the first real optimizations: kernel fusion, tiling, and occupancy. This is a gate lecture, so slow down here.
 
-- [ ] **GPU MODE lecture 5, matmul with shared memory and tiling (about 3 hours).** Optimizing matrix multiplication with shared memory and tiling. This is where coalescing and shared-vs-global click, and it is the single most gate-relevant hour of the week.
+- [x] **GPU MODE lecture 5, matmul with shared memory and tiling (about 3 hours).** Optimizing matrix multiplication with shared memory and tiling. This is where coalescing and shared-vs-global click, and it is the single most gate-relevant hour of the week.
 
-- [ ] **PMPP as reference, not cover to cover (about 2 hours).** Keep it open next to the lectures: chapter 4 for occupancy, chapter 5 for tiling and shared memory, chapter 6 for coalescing and control divergence. Read 5 and 6 with intent, skim the rest.
+- [x] **PMPP as reference, not cover to cover (about 2 hours).** Keep it open next to the lectures: chapter 4 for occupancy, chapter 5 for tiling and shared memory, chapter 6 for coalescing and control divergence. Read 5 and 6 with intent, skim the rest.
 
 ## Part C: profile your own repo, the slack move, about 8 to 10 hours
 
