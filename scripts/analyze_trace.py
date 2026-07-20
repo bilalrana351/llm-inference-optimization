@@ -88,10 +88,57 @@ def is_graph_launch(e: dict) -> bool:
 # Segmentation: which events belong to which decode step
 # ---------------------------------------------------------------------------
 
-def step_starts(events: list[dict], mode: str, marker: str, steps: int) -> tuple[list[float], str]:
+def kernel_marker_starts(events: list[dict], needle: str) -> list[float]:
+    """CPU-timeline start of each forward pass, found via a once-per-pass kernel.
+
+    For vLLM in eager mode there is nothing to segment on: no record_function
+    annotations (the model runs in the EngineCore child, out of reach) and no
+    cudaGraphLaunch. But any kernel that fires exactly once per forward pass, an
+    embedding lookup for instance, is itself a step boundary. Use --list-kernels
+    to find one.
+
+    The boundary has to land on the CPU timeline, because it is also used to
+    bucket runtime events and count launches, and the two timelines are not the
+    same clock domain in a useful way here. So we take the marker kernel's
+    correlation id and use the timestamp of the runtime call that issued it,
+    which is the launch that began the step.
+    """
+    corr_to_launch_ts = {
+        e["args"]["correlation"]: e["ts"]
+        for e in events
+        if e.get("cat") in RUNTIME_CATS and "correlation" in e.get("args", {})
+    }
+    out = []
+    for e in events:
+        if e.get("cat") not in KERNEL_CATS or needle not in str(e.get("name", "")):
+            continue
+        ts = corr_to_launch_ts.get(e.get("args", {}).get("correlation"))
+        out.append(ts if ts is not None else e["ts"])
+    return sorted(out)
+
+
+def list_kernels(events: list[dict], label: str) -> None:
+    """Print kernel names by occurrence count, rarest first.
+
+    A kernel that appears once per forward pass shows up with a count equal to
+    the number of passes in the trace, so the low-count end of this list is where
+    the segmentation markers are.
+    """
+    counts: dict[str, int] = defaultdict(int)
+    for e in events:
+        if e.get("cat") in KERNEL_CATS:
+            counts[str(e.get("name", ""))] += 1
+    print(f"\n[{label}] kernel names by count (rarest first, candidates for --marker-kernel):")
+    for name, n in sorted(counts.items(), key=lambda kv: kv[1])[:25]:
+        print(f"  {n:6d}  {name[:100]}")
+
+
+def step_starts(
+    events: list[dict], mode: str, marker: str, steps: int, marker_kernel: str
+) -> tuple[list[float], str]:
     """Return the CPU-timeline start of each decode step, plus the mode used.
 
-    Three strategies, because the two engines mark themselves differently:
+    Four strategies, because the engines mark themselves differently:
 
       annotation  HF. profile_decode.py wraps each step in record_function, and
                   those annotations only exist while the profiler is active, so
@@ -99,9 +146,21 @@ def step_starts(events: list[dict], mode: str, marker: str, steps: int) -> tuple
       graph       vLLM with CUDA graphs. One cudaGraphLaunch per decode step is
                   itself the step boundary, which is a nice confirmation that the
                   mechanism is doing what it claims.
-      uniform     vLLM eager, or anything unmarked. Needs --steps and just splits
-                  the span evenly, so treat its per-step numbers as averages.
+      kernel      vLLM eager. Segment on a once-per-forward-pass kernel named by
+                  --marker-kernel. Prefill becomes step 0, so --trim-first 1
+                  drops it.
+      uniform     Last resort. Needs --steps and splits the span evenly, which is
+                  only valid if the trace holds nothing but equal decode steps.
+                  A vLLM trace starts with prefill, so uniform will be wrong there.
     """
+    if mode == "kernel" or (mode == "auto" and marker_kernel):
+        if not marker_kernel:
+            raise SystemExit("--segment kernel needs --marker-kernel; try --list-kernels")
+        ks = kernel_marker_starts(events, marker_kernel)
+        if ks:
+            return ks, "kernel"
+        raise SystemExit(f"no kernel matching {marker_kernel!r}; try --list-kernels")
+
     if mode in ("auto", "annotation"):
         ann = sorted(
             (e for e in events if e.get("cat") == "user_annotation" and e.get("name") == marker),
@@ -225,9 +284,9 @@ class TraceSummary:
 
 def summarize(
     label: str, events: list[dict], mode: str, marker: str, steps_hint: int,
-    trim_first: int, clean_step_ms: float,
+    trim_first: int, clean_step_ms: float, marker_kernel: str,
 ) -> tuple[TraceSummary, dict[int, list[dict]]]:
-    starts, used_mode = step_starts(events, mode, marker, steps_hint)
+    starts, used_mode = step_starts(events, mode, marker, steps_hint, marker_kernel)
     by_step, fallback_frac = assign_device_events(events, starts)
 
     keep = [i for i in range(len(starts)) if i >= trim_first and by_step.get(i)]
@@ -364,9 +423,19 @@ def main() -> None:
         help="Unprofiled wall time per decode step, from profile_decode.py pass 1. "
         "Without it the gap is computed from the profiled span and is biased.",
     )
-    parser.add_argument("--segment", choices=["auto", "annotation", "graph", "uniform"],
+    parser.add_argument("--segment", choices=["auto", "annotation", "graph", "kernel", "uniform"],
                         default="auto")
     parser.add_argument("--marker", default="decode_step")
+    parser.add_argument(
+        "--marker-kernel", default="",
+        help="Substring of a kernel that fires exactly once per forward pass. "
+        "Segments traces that have neither annotations nor graph launches, which "
+        "is the vLLM eager case. Find one with --list-kernels.",
+    )
+    parser.add_argument(
+        "--list-kernels", action="store_true",
+        help="Print kernel names by count and exit, to pick a --marker-kernel.",
+    )
     parser.add_argument("--steps", type=int, default=0,
                         help="Required for uniform segmentation, ignored otherwise.")
     parser.add_argument("--trim-first", type=int, default=0,
@@ -388,15 +457,21 @@ def main() -> None:
 
     for label, path in traces.items():
         events = load_events(path)
+        if args.list_kernels:
+            list_kernels(events, label)
+            continue
         s, kept = summarize(
             label, events, args.segment, args.marker, args.steps,
-            args.trim_first, clean.get(label, 0.0),
+            args.trim_first, clean.get(label, 0.0), args.marker_kernel,
         )
         summaries.append(s)
         # Median kept step for the figure: avoids the first, which can still
         # carry allocator noise, and the last, which can be clipped.
         idx = sorted(kept)[len(kept) // 2]
         panels.append((label, kept[idx], s))
+
+    if args.list_kernels:
+        return
 
     header = f"{'engine':<14}{'kernels':>9}{'launches':>10}{'graphs':>8}{'busy ms':>10}{'gap ms':>9}{'idle %':>8}"
     print("\n" + header)
