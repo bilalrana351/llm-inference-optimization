@@ -39,3 +39,6 @@ nohup.out
 .DS_Store
 .idea/
 .vscode/
+
+# vLLM per-worker profiler dumps; the copied trace in results/ is the artifact
+results/vllm_trace/
