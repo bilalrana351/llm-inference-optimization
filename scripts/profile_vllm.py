@@ -90,6 +90,13 @@ def parse_args() -> argparse.Namespace:
         help="Disable compilation AND CUDA graphs. Confounds the two, so use it "
         "as the floor of the three-way comparison, not as the graph control.",
     )
+    parser.add_argument(
+        "--cudagraph-only",
+        action="store_true",
+        help="Full CUDA graphs with compilation off. The fourth cell of the "
+        "design, and not guaranteed to be supported: verify from the init log "
+        "that vLLM did not silently downgrade it.",
+    )
     return parser.parse_args()
 
 
@@ -207,6 +214,18 @@ def main() -> None:
     if args.enforce_eager:
         mode = "eager: no compile, no CUDA graphs"
         extra = {"enforce_eager": True}
+    elif args.cudagraph_only:
+        # CompilationMode.NONE is 0 (the init log prints the enum, VLLM_COMPILE
+        # is 3). Piecewise graphs cannot exist here, since it is the compile pass
+        # that splits the graph for them, but FULL capture is just stream capture
+        # of whatever ops run and does not inherently need inductor.
+        #
+        # vLLM has historically warned and downgraded rather than failed on
+        # unsupported combinations, so check the printed init line: if
+        # cudagraph_mode is not FULL, this run is not the cell you asked for and
+        # its numbers must not go in the table.
+        mode = "CUDA graphs FULL, compilation OFF (verify in the init log)"
+        extra = {"compilation_config": {"mode": 0, "cudagraph_mode": "FULL"}}
     elif args.no_cudagraph:
         # Keep torch.compile, drop only graph capture. This is the control that
         # separates the CUDA-graph term from inductor's kernel fusion; setting
