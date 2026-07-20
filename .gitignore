@@ -33,7 +33,6 @@ hf_cache/
 .cache/huggingface/
 
 # Logs and scratch
-*.log
 nohup.out
 
 # OS / editor
