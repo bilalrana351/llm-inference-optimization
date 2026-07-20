@@ -1,0 +1,2 @@
+label,segment_mode,steps,gpu_kernels_per_step,cpu_launches_per_step,graph_launches_per_step,gpu_busy_ms,trace_span_ms,trace_gap_ms,clean_step_ms,clean_gap_ms,clean_idle_frac,correlation_fallback_frac
+hf,annotation,5,1253.2,1253.0,0.0,12.791710742187501,61.177576416015626,48.38586567382812,35.1797,22.387989257812496,0.6363894307743527,0.00031887755102040814

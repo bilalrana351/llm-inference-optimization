@@ -279,12 +279,23 @@ def summarize(
 # The figure
 # ---------------------------------------------------------------------------
 
-def timeline_figure(panels: list[tuple[str, list[dict]]], path: str) -> None:
-    """One decode step per engine, device intervals as bars on a shared x axis.
+def timeline_figure(
+    panels: list[tuple[str, list[dict], TraceSummary]], path: str, window_us: float
+) -> None:
+    """A zoomed slice of one decode step per engine, device intervals as bars.
+
+    The slice is not optional. A full HF step is tens of milliseconds and its
+    features are single-digit microseconds, so at any printable width one pixel
+    covers several kernels and the row renders as a solid block no matter how
+    idle the device actually was. Plotting a window from the start of the step
+    is the only way the gaps are visible at all.
 
     HF should read as a dashed comb, every tooth a few microseconds of work with
-    visible white space after it. vLLM under graphs should read as a near-solid
-    bar. That contrast is the figure the blog is missing.
+    white space after it. vLLM under graphs should read as a near-solid bar. That
+    contrast is the figure the blog is missing.
+
+    The caption carries the whole-step numbers so the slice is never mistaken for
+    the measurement: the bars are an illustration, the table is the result.
     """
     import matplotlib
 
@@ -292,37 +303,40 @@ def timeline_figure(panels: list[tuple[str, list[dict]]], path: str) -> None:
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(
-        len(panels), 1, figsize=(11, 1.5 * len(panels) + 1.2), sharex=True, squeeze=False
+        len(panels), 1, figsize=(11, 1.15 * len(panels) + 1.3), sharex=True, squeeze=False
     )
     axes = [a[0] for a in axes]
 
-    # One absolute x scale across panels, not one per panel. A step that takes
-    # longer must look longer: rescaling each engine to its own width would hide
-    # the result inside the figure that is supposed to show it.
-    widest = 0.0
-    for _, evs in panels:
-        _, lo, hi = merged_span([(e["ts"], e["ts"] + e["dur"]) for e in evs])
-        widest = max(widest, hi - lo)
-
-    for ax, (label, evs) in zip(axes, panels):
+    for ax, (label, evs, s) in zip(axes, panels):
         origin = min(e["ts"] for e in evs)
-        # Sub-microsecond kernels would render as nothing at this width, so floor
-        # the drawn bar. Cosmetic only: every number comes from the raw durations.
-        bars = [(e["ts"] - origin, max(e["dur"], widest / 900.0)) for e in evs]
+        # Floor the drawn width at well under a pixel's worth of time, so a
+        # sub-microsecond kernel is still visible without inflating anything that
+        # would otherwise be distinguishable. Cosmetic only: every number in the
+        # caption and the table comes from raw durations.
+        floor = window_us / 1500.0
+        bars = [
+            (e["ts"] - origin, max(e["dur"], floor))
+            for e in evs
+            if e["ts"] - origin < window_us
+        ]
         ax.broken_barh(bars, (0.1, 0.5), facecolors="#2b6cb0")
-        busy, lo, hi = merged_span([(e["ts"], e["ts"] + e["dur"]) for e in evs])
-        total = hi - lo
-        idle = (1 - busy / total) * 100 if total > 0 else 0.0
+        idle = (s.clean_idle_frac * 100) if s.clean_step_ms > 0 else (
+            s.trace_gap_ms / s.trace_span_ms * 100 if s.trace_span_ms else 0.0
+        )
+        step_ms = s.clean_step_ms if s.clean_step_ms > 0 else s.trace_span_ms
         ax.set_ylabel(label, rotation=0, ha="right", va="center", fontsize=10)
         ax.set_yticks([])
         ax.set_ylim(0, 1.05)
         ax.text(
-            0.995, 0.97, f"{len(evs)} kernels, {total:.0f} us, {idle:.0f}% idle",
+            0.995, 0.97,
+            f"whole step: {s.gpu_kernels_per_step:.0f} kernels, "
+            f"{s.cpu_launches_per_step:.0f} CPU launches, "
+            f"{step_ms:.1f} ms, {idle:.0f}% idle",
             transform=ax.transAxes, ha="right", va="top", fontsize=9, color="#4a5568",
         )
 
-    axes[0].set_xlim(0, widest * 1.02)
-    axes[-1].set_xlabel("microseconds within one decode step")
+    axes[0].set_xlim(0, window_us)
+    axes[-1].set_xlabel(f"microseconds from the start of one decode step (first {window_us:.0f} us)")
     axes[0].set_title("Device occupancy during one batch-1 decode step", fontsize=11)
     fig.tight_layout()
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -359,13 +373,18 @@ def main() -> None:
                         help="Drop leading steps. Use it to cut prefill out of a vLLM trace.")
     parser.add_argument("--csv", default="results/profile_summary.csv")
     parser.add_argument("--figure", default="")
+    parser.add_argument(
+        "--figure-window-us", type=float, default=1500.0,
+        help="Width of the zoomed slice in the figure. A whole step is far too "
+        "wide to resolve individual kernels; the table carries the real numbers.",
+    )
     args = parser.parse_args()
 
     traces = parse_pairs(args.trace, "trace")
     clean = {k: float(v) for k, v in parse_pairs(args.clean_step_ms, "clean-step-ms").items()}
 
     summaries: list[TraceSummary] = []
-    panels: list[tuple[str, list[dict]]] = []
+    panels: list[tuple[str, list[dict], TraceSummary]] = []
 
     for label, path in traces.items():
         events = load_events(path)
@@ -377,7 +396,7 @@ def main() -> None:
         # Median kept step for the figure: avoids the first, which can still
         # carry allocator noise, and the last, which can be clipped.
         idx = sorted(kept)[len(kept) // 2]
-        panels.append((label, kept[idx]))
+        panels.append((label, kept[idx], s))
 
     header = f"{'engine':<14}{'kernels':>9}{'launches':>10}{'graphs':>8}{'busy ms':>10}{'gap ms':>9}{'idle %':>8}"
     print("\n" + header)
@@ -418,7 +437,7 @@ def main() -> None:
     print(f"\nrows appended -> {args.csv}")
 
     if args.figure:
-        timeline_figure(panels, args.figure)
+        timeline_figure(panels, args.figure, args.figure_window_us)
 
 
 if __name__ == "__main__":
