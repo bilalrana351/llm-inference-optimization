@@ -28,9 +28,15 @@ CUDA-graph term on its own, and --no-cudagraph against --enforce-eager is the
 inductor fusion term. That decomposition is the thing blog/draft.md currently
 asserts without evidence.
 
-Note that inductor fusion means vLLM's GPU kernel count per step should come in
-well below the HF baseline's, not merely its launch count. A CUDA graph on its
-own would leave the kernel count untouched.
+--cudagraph-only fills the fourth cell (graphs without compilation), making the
+four vLLM runs a full 2x2 over compilation and graph capture.
+
+Measured outcome on the 3060 at batch 1: inductor changes almost nothing. Eager
+and compiled decode steps run 356 against 354 kernels and 10.61 against 10.54 ms
+of device time. vLLM's fusion is already in its hand-written CUDA kernels (fused
+RMSNorm, RoPE, SiLU-and-mul, paged attention), which are present in eager mode
+too, and inductor has little left to fuse. The kernel-count drop is against the
+HF baseline (1253 kernels per step), not against vLLM eager.
 
 Like the HF script, two passes: a clean unprofiled pass for the wall time per
 step (T) and a profiled pass for the kernel intervals (B). The published gap is
@@ -38,8 +44,9 @@ T - B, each term taken from the run where it is not distorted.
 
 Usage (Environment B, the vLLM venv):
     python scripts/profile_vllm.py --label vllm-graph
-    python scripts/profile_vllm.py --label vllm-compile --no-cudagraph
-    python scripts/profile_vllm.py --label vllm-eager --enforce-eager
+    python scripts/profile_vllm.py --label vllm-compile   --no-cudagraph
+    python scripts/profile_vllm.py --label vllm-eager     --enforce-eager
+    python scripts/profile_vllm.py --label vllm-graphonly --cudagraph-only
 """
 
 from __future__ import annotations
@@ -47,6 +54,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import statistics
 import time
 
 
@@ -57,9 +65,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--clean-tokens",
         type=int,
-        default=256,
-        help="Tokens for the unprofiled timing pass. Matches bench_vllm.py so the "
-        "step time is directly checkable against results/baseline_vllm.csv.",
+        default=0,
+        help="Tokens for the unprofiled timing pass. Defaults to --profile-tokens "
+        "so the two passes cover the same sequence positions. Overriding it with "
+        "a larger value measures a different, longer KV cache and the resulting "
+        "wall time must not be subtracted from this trace's busy time.",
     )
     parser.add_argument(
         "--profile-tokens",
@@ -67,6 +77,13 @@ def parse_args() -> argparse.Namespace:
         default=12,
         help="Tokens for the profiled pass. Keep it small: the step is a loop "
         "body, and vLLM traces grow fast.",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=3,
+        help="Clean timing passes to run. The median is reported. A short window "
+        "is noisier than a 255-token one, so repeat it rather than lengthen it.",
     )
     parser.add_argument("--label", default="vllm-graph")
     parser.add_argument("--trace-dir", default="results/vllm_trace")
@@ -258,12 +275,23 @@ def main() -> None:
     # --- pass 1: clean, no profiler ---
     # Same two-run subtraction as bench_vllm.py, because generate() is one
     # blocking call and will not hand us a prefill/decode split.
-    print(f"\npass 1 (clean, no profiler): {args.clean_tokens} tokens")
-    prefill_s = timed_generate(llm, prompt_token_ids, max_tokens=1)
-    total_s = timed_generate(llm, prompt_token_ids, max_tokens=args.clean_tokens)
-    decode_s = max(total_s - prefill_s, 1e-9)
-    decode_count = max(args.clean_tokens - 1, 0)
-    clean_step_ms = (decode_s / decode_count) * 1000.0
+    #
+    # clean_tokens defaults to profile_tokens so both passes cover the same
+    # sequence positions. That matters: a decode step gets slower as the KV cache
+    # grows, so timing 255 tokens and then subtracting the busy time of 11 steps
+    # measured near the start of the sequence compares two different workloads.
+    clean_tokens = args.clean_tokens or args.profile_tokens
+    decode_count = max(clean_tokens - 1, 0)
+    print(f"\npass 1 (clean, no profiler): {clean_tokens} tokens x {args.repeats}")
+    step_times = []
+    for i in range(args.repeats):
+        prefill_s = timed_generate(llm, prompt_token_ids, max_tokens=1)
+        total_s = timed_generate(llm, prompt_token_ids, max_tokens=clean_tokens)
+        d = max(total_s - prefill_s, 1e-9)
+        step_times.append((d / decode_count) * 1000.0)
+        print(f"  repeat {i + 1}: {step_times[-1]:.3f} ms/step")
+    clean_step_ms = statistics.median(step_times)
+    decode_s = clean_step_ms * decode_count / 1000.0
     decode_tps = decode_count / decode_s
     # Printed here, not only in the final report: pass 2 is the fragile half
     # (profiler APIs move between vLLM versions) and there is no reason for its
@@ -300,7 +328,8 @@ def main() -> None:
     print(f"model              {args.model} fp16, batch 1")
     print(f"mode               {mode}")
     print(f"prompt tokens      {prompt_tokens}")
-    print(f"clean decode       {decode_tps:8.1f} tok/s over {decode_count} tokens")
+    print(f"clean decode       {decode_tps:8.1f} tok/s over {decode_count} steps")
+    print(f"clean spread       {max(step_times) - min(step_times):8.3f} ms across {args.repeats} repeats")
     print(f"clean step time    {clean_step_ms:8.3f} ms   <- use this as T")
     print(f"profiled pass      {prof_s:8.3f} s over {args.profile_tokens} tokens")
     print("-" * 68)

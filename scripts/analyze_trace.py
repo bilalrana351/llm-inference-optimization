@@ -44,6 +44,7 @@ import csv
 import gzip
 import json
 import os
+import statistics
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 
@@ -275,7 +276,8 @@ class TraceSummary:
     graph_launches_per_step: float
     gpu_busy_ms: float          # union of device intervals, per step
     trace_span_ms: float        # first device start to last device end, per step
-    trace_gap_ms: float         # span - busy, inflated by the profiler
+    trace_step_period_ms: float  # boundary to boundary, the real profiled step
+    trace_gap_ms: float         # period - busy, inflated by the profiler
     clean_step_ms: float        # unprofiled wall time per step, 0 if not given
     clean_gap_ms: float         # clean_step_ms - gpu_busy_ms, the publishable one
     clean_idle_frac: float
@@ -315,6 +317,19 @@ def summarize(
     n = len(keep)
     busy_ms = busy / n / 1000.0
     span_ms = span / n / 1000.0
+
+    # Span is first-to-last device event WITHIN a step, so it silently omits the
+    # CPU-only time between the last kernel of one step and the first of the
+    # next: scheduling, sampling, detokenisation. That time is part of the step.
+    # Boundary-to-boundary is the honest profiled step duration, so the fallback
+    # gap (used when no clean wall time was supplied) is measured against it.
+    kept_sorted = sorted(keep)
+    diffs = [
+        starts[b] - starts[a]
+        for a, b in zip(kept_sorted, kept_sorted[1:]) if b == a + 1
+    ]
+    period_ms = (statistics.median(diffs) / 1000.0) if diffs else span_ms
+
     clean_gap = (clean_step_ms - busy_ms) if clean_step_ms > 0 else 0.0
 
     return TraceSummary(
@@ -326,7 +341,8 @@ def summarize(
         graph_launches_per_step=sum(graphs[i] for i in keep) / n,
         gpu_busy_ms=busy_ms,
         trace_span_ms=span_ms,
-        trace_gap_ms=span_ms - busy_ms,
+        trace_step_period_ms=period_ms,
+        trace_gap_ms=period_ms - busy_ms,
         clean_step_ms=clean_step_ms,
         clean_gap_ms=clean_gap,
         clean_idle_frac=(clean_gap / clean_step_ms) if clean_step_ms > 0 else 0.0,
@@ -380,9 +396,9 @@ def timeline_figure(
         ]
         ax.broken_barh(bars, (0.1, 0.5), facecolors="#2b6cb0")
         idle = (s.clean_idle_frac * 100) if s.clean_step_ms > 0 else (
-            s.trace_gap_ms / s.trace_span_ms * 100 if s.trace_span_ms else 0.0
+            s.trace_gap_ms / s.trace_step_period_ms * 100 if s.trace_step_period_ms else 0.0
         )
-        step_ms = s.clean_step_ms if s.clean_step_ms > 0 else s.trace_span_ms
+        step_ms = s.clean_step_ms if s.clean_step_ms > 0 else s.trace_step_period_ms
         ax.set_ylabel(label, rotation=0, ha="right", va="center", fontsize=10)
         ax.set_yticks([])
         ax.set_ylim(0, 1.05)
@@ -479,7 +495,7 @@ def main() -> None:
     for s in summaries:
         gap = s.clean_gap_ms if s.clean_step_ms > 0 else s.trace_gap_ms
         idle = s.clean_idle_frac * 100 if s.clean_step_ms > 0 else (
-            s.trace_gap_ms / s.trace_span_ms * 100 if s.trace_span_ms else 0.0
+            s.trace_gap_ms / s.trace_step_period_ms * 100 if s.trace_step_period_ms else 0.0
         )
         print(
             f"{s.label:<14}{s.gpu_kernels_per_step:>9.0f}{s.cpu_launches_per_step:>10.0f}"
