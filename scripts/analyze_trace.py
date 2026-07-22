@@ -402,11 +402,15 @@ def timeline_figure(
         ax.set_ylabel(label, rotation=0, ha="right", va="center", fontsize=10)
         ax.set_yticks([])
         ax.set_ylim(0, 1.05)
+        # A gap inside the method's ~2% floor is not negative idle time, it is
+        # zero measured imprecisely. Printing "-2% idle" invites the reader to
+        # think the analysis is broken when in fact it is reporting the result.
+        idle_txt = "~0% idle (device busy all step)" if idle < 2.0 else f"{idle:.0f}% idle"
         ax.text(
             0.995, 0.97,
             f"whole step: {s.gpu_kernels_per_step:.0f} kernels, "
             f"{s.cpu_launches_per_step:.0f} CPU launches, "
-            f"{step_ms:.1f} ms, {idle:.0f}% idle",
+            f"{step_ms:.1f} ms, {idle_txt}",
             transform=ax.transAxes, ha="right", va="top", fontsize=9, color="#4a5568",
         )
 
