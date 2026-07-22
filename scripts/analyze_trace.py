@@ -514,6 +514,19 @@ def main() -> None:
                 f"{s.correlation_fallback_frac * 100:.0f}% of device events lacked "
                 "correlation ids and were bucketed by timestamp"
             )
+        # T and B come from different runs, so the subtraction carries a
+        # systematic error: CUPTI inflates kernel durations by a percent or two,
+        # and the two passes need not sit at identical clocks. That floor is
+        # irrelevant when the gap is milliseconds and decisive when it is near
+        # zero, where it can push the difference below zero. Report such a row as
+        # "at the resolution floor" rather than quoting a negative idle time.
+        if s.clean_step_ms > 0 and s.clean_gap_ms < 0.02 * s.clean_step_ms:
+            notes.append(
+                f"gap {s.clean_gap_ms:+.2f} ms is within the ~2% floor of the "
+                f"T-minus-B method (T and B come from separate runs): read as "
+                f"gap indistinguishable from zero, device busy the entire step"
+            )
+
         for n in notes:
             print(f"  [{s.label}] {n}")
 
