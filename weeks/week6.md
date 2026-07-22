@@ -10,13 +10,17 @@ Before anything else, spend one hour checking the Vast.ai box for uncommitted wo
 
 This is Week 4 Part C, unchanged and now due.
 
-- [ ] **Trace the HF decode step (about 4 hours).** Run `baseline_hf.py` under the PyTorch profiler on the 3060 and capture a decode-step trace. Add the runner as `scripts/profile_decode.py` so it reproduces, and commit the raw trace to `results/`. The blog claims from reasoning that batch-1 decode is CPU-launch-bound: many small kernels and an idle GPU between them. The launch gaps should be visible.
+- [x] **Trace the HF decode step (about 4 hours).** Run `baseline_hf.py` under the PyTorch profiler on the 3060 and capture a decode-step trace. Add the runner as `scripts/profile_decode.py` so it reproduces, and commit the raw trace to `results/`. The blog claims from reasoning that batch-1 decode is CPU-launch-bound: many small kernels and an idle GPU between them. The launch gaps should be visible.
+  Landed: `scripts/profile_decode.py`, `results/trace_hf_decode.json.gz`. Gaps are visible and they dominate: 1198 kernels per step, 1198 CPU launches, 62.3% of the step is device idle.
 
-- [ ] **Trace the vLLM decode step (about 3 hours).** Same profiler, same model, same prompt and output lengths, run in Environment B. Show the single captured-graph replay against the HF kernel storm.
+- [x] **Trace the vLLM decode step (about 3 hours).** Same profiler, same model, same prompt and output lengths, run in Environment B. Show the single captured-graph replay against the HF kernel storm.
+  Landed: `scripts/profile_vllm.py` plus four traces, not one. vLLM 0.25.1 applies torch.compile and CUDA graphs together and `enforce_eager` disables both, so a single vLLM run would have credited one optimization with the other's win. Ran the full 2x2 over compilation and graph capture instead.
 
-- [ ] **Reduce both traces to one number each (about 2 hours).** Kernel count per decode step and idle gap time per decode step, HF against vLLM. One table, one figure. This is the measured version of the CUDA-graph claim, and it is the part a reader remembers.
+- [x] **Reduce both traces to one number each (about 2 hours).** Kernel count per decode step and idle gap time per decode step, HF against vLLM. One table, one figure. This is the measured version of the CUDA-graph claim, and it is the part a reader remembers.
+  Landed: `scripts/analyze_trace.py`, `results/profile_summary.csv`, `results/decode_timeline.png`. Three numbers rather than two, because CPU launch count and GPU kernel count separate under graphs and that separation is the mechanism.
 
 - [ ] **Commit `docs/profiling.md` (about 4 hours).** Same discipline as `baseline-hf-results.md` and `batching-results.md`: method, raw numbers, then what the numbers mean. Link the figure into `blog/draft.md` where the claim currently sits unsupported.
+  Doc is committed. The `blog/draft.md` half is not: the figure is still unlinked, and two claims in "Why the two engines differ" are now contradicted by the measurement (bandwidth is 21% not 15-20%, and the paragraph credits CUDA graphs with kernel fusion that graphs do not do).
 
 ## Part B: the gate, in writing, about 10 hours
 
