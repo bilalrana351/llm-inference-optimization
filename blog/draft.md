@@ -24,18 +24,23 @@ around.
 | metric | HF transformers | vLLM | gap |
 | --- | --- | --- | --- |
 | prefill latency | ~137 ms (3740 tok/s over the prompt) | ~124 ms (4114 tok/s) | ~1.1x |
-| decode tokens/sec | ~18-23 tok/s | ~79.9 tok/s | ~3.5-4x |
-| decode bandwidth use | ~15-20% of 360 GB/s | ~68% | |
+| decode tokens/sec | 18.0-28.3 tok/s (six runs) | ~79.9 tok/s | ~2.8-4.4x |
+| decode bandwidth use | 16-24% of 360 GB/s | ~68% | |
 | VRAM | 3133 MiB peak, grown organically | 11237 MiB, reserved up front | not comparable |
 
 Two numbers carry the whole comparison. Prefill barely moves, because both
 engines hand the prompt's matrix multiplies to the same cuBLAS tensor-core
 kernels, and you cannot beat cuBLAS on a raw GEMM. vLLM's ~10% edge there is
 trimmed launch overhead, not a faster matmul. Decode is the opposite story: vLLM
-is roughly 4x faster, and the bandwidth-use row says why. HF decode runs at only
-~15-20% of the card's memory bandwidth, while vLLM reaches ~68%. The headroom was
+is roughly 3-4x faster, and the bandwidth-use row says why. HF decode runs at only
+16-24% of the card's memory bandwidth, while vLLM reaches ~68%. The headroom was
 never compute; it was that decode is memory-bound and HF was leaving most of the
 memory pipe idle. The next section is why.
+
+(The HF spread is wide because the first two runs, on 2026-06-25, came in at 18.0
+and 23.2 tok/s while the four later ones cluster tightly at 28.0 to 28.3. Take
+~28 tok/s as the settled figure and the wider range as a reminder that a rented
+box is not a fixed quantity, a point the profiling section returns to.)
 
 The VRAM column is the one trap. HF's figure is what generation organically grew
 into; vLLM's 11237 MiB is a pool it reserves at startup (weights 3.0 GiB, KV pool
@@ -134,16 +139,82 @@ re-enters Python and walks all 28 layers, firing hundreds of separate kernels,
 each one preceded by Python interpreting the code and dispatching the op. At batch
 1 the GPU work per kernel is a few microseconds, often less than the time Python
 needs to launch the next one, so the GPU finishes and stalls, waiting on the CPU.
-That is what ~15-20% bandwidth use means: the memory pipe is half-empty because
-the bottleneck is the interpreter, not the hardware.
 
-vLLM takes the CPU out of that loop. It captures the whole decode step into a CUDA
-graph, a recording of every kernel launch in order, and replays it with a single
-call, and it fuses many of those kernels into fewer, bigger ones. Now one launch
-hands the GPU the entire step and it streams weights back to back with no Python
-in between, which is the jump to ~68% bandwidth use. Prefill cannot benefit the
-same way: it is one long parallel pass that already keeps the GPU busy, so there
-is no idle gap for graphs to close, which is exactly why prefill barely moved.
+That paragraph was an argument. Here is the trace behind it. Every configuration
+below is one RTX 3060 running the same model, prompt, and batch size, profiled
+with the PyTorch profiler, and the full method is in `docs/profiling.md`.
+
+| run | kernels | CPU launches | GPU busy | step | idle |
+| --- | --- | --- | --- | --- | --- |
+| HF | 1198 | 1198 | 15.31 ms | 40.65 ms | 62.3% |
+| vLLM, no compile, no graphs | 356 | 356 | 13.02 ms | 25.22 ms | 48.4% |
+| vLLM, compile only | 354 | 354 | 12.90 ms | 22.41 ms | 42.4% |
+| vLLM, graphs only | 385 | 17 | 12.77 ms | 12.57 ms | ~0% |
+| vLLM, both (shipping default) | 383 | 17 | 12.71 ms | 12.56 ms | ~0% |
+
+![Device occupancy during the first 1500 microseconds of one batch-1 decode step,
+one row per configuration. Without CUDA graphs the row is a sparse comb of a few
+microseconds of work separated by long white gaps; with graphs it is a solid bar.
+Both rows run the same kernels.](../results/decode_timeline.png)
+
+HuggingFace fires 1198 kernels per token and the CPU launches every one of them
+individually. The device works for 15.31 ms of a 40.65 ms step and idles for the
+other 25.34 ms. That is the white space in the figure, and it is 62% of every
+token spent waiting on Python.
+
+The per-launch cost is not the problem; it is 21 microseconds, against an average
+kernel that runs 13. The problem is paying it 1198 times. Batch-1 decode kernels
+are matrix-vector products, a few microseconds each, so the dispatch chain above
+a kernel costs more than the kernel.
+
+vLLM attacks this twice, and the two attacks are worth separating because the
+obvious story gets them backwards.
+
+**Its kernels are fused by hand, before any compiler runs.** Comparing the two
+engines with compilation and graphs off on both sides, kernel count falls from
+1198 to 356. That 3.4x is vLLM's own CUDA kernels: fused RMSNorm, fused rotary
+embedding, fused SiLU-and-multiply, paged FlashAttention. Device time falls too,
+15.31 to 13.02 ms, but only by 15%. Fusion is mostly buying fewer launches, not
+less memory traffic, because at batch 1 the activations it keeps in registers are
+about 0.15% of the bytes moved. The weights are the other 99.85% and every engine
+has to read all of them.
+
+Notice that vLLM's cost per launch is *higher* than HF's, 34 microseconds against
+21, because each vLLM step also runs scheduling, block-table management, slot
+mapping, and sampling that a hand-written loop does not have. It still wins the
+total, 12.20 ms of idle against 25.34 ms, because it pays more, far fewer times.
+
+**CUDA graphs remove the CPU from the loop.** A graph is a recording of the
+launches in order, instantiated once and replayed with one call per replay, so
+the CPU stops arbitrating between kernels. Launches per step fall from 356 to 17,
+and the idle gap goes to zero. This is where the win is.
+
+What a graph does *not* do is change the work. The same kernels run, from the same
+resident cubins, in the same order: with graphs off, 29 GEMV, 28 CUTLASS, 28
+FlashAttention split-KV, 56 RMSNorm; with graphs on, exactly the same counts, plus
+29 small parameter copies that the graph itself needs. Device busy time is flat
+across all four vLLM rows, 12.71 to 13.02 ms, a 2.4% spread. Graphs convert idle
+time into nothing at all and leave arithmetic untouched.
+
+The clean test of that: turning graphs on should collapse the step to precisely
+the device work already there. Predicted from the graphs-off busy time, 13.02 and
+12.90 ms; measured with graphs on, 12.57 and 12.56 ms. Within 3.5% and 2.6%.
+
+**And the two are not additive.** `torch.compile` is worth 2.81 ms per step with
+graphs off, and 0.01 ms with them on. Once graphs have taken the CPU off the
+critical path, making the CPU's per-launch work cheaper buys nothing. Both
+optimizations attack the same term, so their gains overlap almost completely.
+This is also why the ablation was worth running: comparing only the shipping
+default against plain eager would have credited CUDA graphs with a fusion win, or
+fusion with a graph win, with no way to tell which.
+
+Adding it up, of the 28.09 ms per token that separates the two engines, 25.34 ms
+(90%) is device idle removed and 2.60 ms (9%) is faster device work. The jump to
+~68% bandwidth use is almost entirely the GPU no longer waiting.
+
+Prefill cannot benefit the same way: it is one long parallel pass that already
+keeps the GPU busy, so there is no idle gap for graphs to close, which is exactly
+why prefill barely moved.
 
 None of this is PagedAttention, which is a separate win and invisible at batch 1.
 PagedAttention manages the KV cache like operating-system virtual memory, paging

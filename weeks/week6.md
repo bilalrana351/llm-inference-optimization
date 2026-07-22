@@ -19,8 +19,10 @@ This is Week 4 Part C, unchanged and now due.
 - [x] **Reduce both traces to one number each (about 2 hours).** Kernel count per decode step and idle gap time per decode step, HF against vLLM. One table, one figure. This is the measured version of the CUDA-graph claim, and it is the part a reader remembers.
   Landed: `scripts/analyze_trace.py`, `results/profile_summary.csv`, `results/decode_timeline.png`. Three numbers rather than two, because CPU launch count and GPU kernel count separate under graphs and that separation is the mechanism.
 
-- [ ] **Commit `docs/profiling.md` (about 4 hours).** Same discipline as `baseline-hf-results.md` and `batching-results.md`: method, raw numbers, then what the numbers mean. Link the figure into `blog/draft.md` where the claim currently sits unsupported.
-  Doc is committed. The `blog/draft.md` half is not: the figure is still unlinked, and two claims in "Why the two engines differ" are now contradicted by the measurement (bandwidth is 21% not 15-20%, and the paragraph credits CUDA graphs with kernel fusion that graphs do not do).
+- [x] **Commit `docs/profiling.md` (about 4 hours).** Same discipline as `baseline-hf-results.md` and `batching-results.md`: method, raw numbers, then what the numbers mean. Link the figure into `blog/draft.md` where the claim currently sits unsupported.
+  Landed: `docs/profiling.md`, and `blog/draft.md` "Why the two engines differ" rewritten against the trace with `decode_timeline.png` linked in. Two claims there were wrong and are now fixed: bandwidth use was 16-24%, not 15-20%, and the paragraph credited CUDA graphs with kernel fusion that graphs demonstrably do not do (kernel counts are identical with graphs on and off).
+
+**Part A is closed.** The measurement changed the argument rather than confirming it: the CUDA-graph win is real and is 90% of the gap, but the fusion the draft attributed to graphs is vLLM's hand-written kernels, and `torch.compile` turns out to be worth 2.81 ms per step without graphs and 0.01 ms with them. Repairing `results/baseline_hf.csv` along the way (header and first data row were joined by a missing newline) recovered the slowest fp16 run, which had been silently absent from every reader.
 
 ## Part B: the gate, in writing, about 10 hours
 
