@@ -107,10 +107,31 @@ were repeated on both, and device busy time was uniformly higher on the second:
 | graphs only | 10.55 | 12.77 | 1.210 |
 | both | 10.47 | 12.71 | 1.214 |
 
-Mean 1.219, spread 1.4%. Identical work and identical kernels taking uniformly
-22% longer is a clock or power-limit difference, not noise. The HF trace was
+Mean 1.219, spread 1.4%. Identical work taking uniformly 22% longer, with a
+spread that tight, is a property of the machine and not noise. The HF trace was
 re-run on box B before being compared against anything: predicted 15.6 ms busy
 from the scaling, measured 15.31 ms.
+
+**The cause is not memory clock, and the obvious explanation was wrong.** The
+Vast.ai listing for box B advertises 287 GB/s, and 192 bits at 12 Gbps is exactly
+288, which made a roughly 20% memory downclock look like a clean explanation:
+360/287 is 1.25 against a measured 1.22. Measuring the card directly killed it.
+NVML reports 7501 MHz over 192 bits, so 360 GB/s theoretical, stock clocks. The
+listing's 287 turns out to be an achievable figure, within 1.5% of the 291.5 GB/s
+this repo measures with a streaming read, not a theoretical peak.
+
+So the 1.22x is real, reproducible, and still unexplained. Remaining candidates,
+none of them tested: core clock or power cap (box B's host is an older Xeon
+E5-2680 v4 platform), thermal state, a co-tenant on the card, or the software
+stack, since HF kernel *selection* also differed between the boxes (different
+`gemv2T_kernel_val` template parameters, different FlashAttention split-KV
+traits, 280 elementwise calls replaced by 5 fused ones). That last one is the
+most interesting candidate and the easiest to check, by pinning versions and
+re-running.
+
+The practical lesson stands regardless: a "verified" listing with the same GPU
+name and the same VRAM does not pin performance, and Vast.ai's bandwidth column
+is a measured number, not a spec.
 
 **Every number in the results below is from box B.** On Vast.ai, "same GPU model"
 does not mean "same performance", and mixing boxes inside one comparison table
@@ -128,20 +149,41 @@ silently invalidates it.
 
 Reading the same table as throughput and memory bandwidth. Each decode step reads
 all 3.088 GB of fp16 weights plus about 15 MB of KV cache at sequence length 525,
-so 3.103 GB moves per token. Peak bandwidth on this card is 360 GB/s.
+so 3.103 GB moves per token.
 
-| run | tok/s | GB/s over the step | % of peak | GB/s while busy | % of peak |
+Two denominators, because they say different things.
+`scripts/measure_bandwidth.py` reports both for this box:
+
+- **Theoretical, 360.0 GB/s.** Computed from what NVML says the card is actually
+  set to, 7501 MHz doubled for GDDR6 over a 192-bit bus, not from the model name.
+  This card is at stock clocks.
+- **Achievable, 291.5 GB/s**, measured by a large streaming read. That is 81% of
+  theoretical, which is the normal range. No kernel can exceed it, so it is the
+  honest ceiling to measure an engine against.
+
+| run | tok/s | GB/s over the step | % achievable | GB/s while busy | % achievable |
 | --- | --- | --- | --- | --- | --- |
-| HF | 24.6 | 76.3 | 21% | 202.7 | 56% |
-| vllm-eager | 39.7 | 123.1 | 34% | 238.3 | 66% |
-| vllm-compile | 44.6 | 138.5 | 39% | 240.6 | 67% |
-| vllm-graphonly | 79.6 | 246.9 | 69% | 243.0 | 68% |
-| vllm-graph | 79.6 | 247.1 | 69% | 244.2 | 68% |
+| HF | 24.6 | 76.3 | 26% | 202.7 | 70% |
+| vllm-eager | 39.7 | 123.1 | 42% | 238.3 | 82% |
+| vllm-compile | 44.6 | 138.5 | 48% | 240.6 | 83% |
+| vllm-graphonly | 79.6 | 246.9 | 85% | 243.0 | 83% |
+| vllm-graph | 79.6 | 247.1 | 85% | 244.2 | 84% |
+
+Against theoretical instead, the "over the step" column reads 21%, 34%, 39%, 69%,
+69%, which is the framing the blog draft used.
 
 The last two columns are the point. While the device is actually working, every
-engine sits at 56% to 68% of peak bandwidth. The spread in the throughput column
-is almost entirely the spread in how much of the step the device spends working
-at all.
+engine sits at 70% to 84% of achievable bandwidth. The spread in the throughput
+column is almost entirely the spread in how much of the step the device spends
+working at all.
+
+The other point is the one the ceiling makes visible. vLLM's decode step runs at
+**85% of this card's achievable read bandwidth**, so it is close to the hardware
+limit and there is not much left to win at batch 1. The remaining headroom is not
+in scheduling, it is in arithmetic intensity: batching amortizes the same weight
+read across more tokens, which is what `docs/batching-results.md` measures. That
+is the natural next lever, and it is a different lever from anything in this
+document.
 
 ### The 2x2, in step time (ms)
 

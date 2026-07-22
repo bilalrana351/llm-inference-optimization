@@ -212,6 +212,20 @@ Adding it up, of the 28.09 ms per token that separates the two engines, 25.34 ms
 (90%) is device idle removed and 2.60 ms (9%) is faster device work. The jump to
 ~68% bandwidth use is almost entirely the GPU no longer waiting.
 
+It is worth asking how much room is left. 68% is measured against the card's
+360 GB/s theoretical peak, but no kernel reaches theoretical. Measuring this card
+with a large streaming read gives 291.5 GB/s achievable, 81% of theoretical,
+which is the normal ratio and the real ceiling. Against that ceiling vLLM's
+decode step runs at **85%**, and HF at 26%.
+
+So vLLM has very nearly exhausted this optimization. The gap it closed was the
+GPU waiting on Python, and at batch 1 that gap is now gone. Whatever comes next
+cannot come from better scheduling, because there is almost no idle left to
+remove. It has to come from moving fewer bytes per token, which means raising
+arithmetic intensity: batch the requests so one read of the weights serves many
+tokens instead of one. That is the batching section below, and it is why the
+throughput story and the latency story stop agreeing there.
+
 Prefill cannot benefit the same way: it is one long parallel pass that already
 keeps the GPU busy, so there is no idle gap for graphs to close, which is exactly
 why prefill barely moved.
