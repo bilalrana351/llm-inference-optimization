@@ -352,27 +352,39 @@ blocks. Grouped-query attention gives Qwen2.5-1.5B 2 KV heads against 12 query
 heads, so `k_proj` and `v_proj` produce only 256 outputs each. There is not
 enough output to spread across the chip.
 
-Reading the template parameters as a 128-thread block covering 16 output
-columns, the grid sizes follow:
+Reading the template parameters of `gemv2T_kernel_val` as a 128-thread block
+covering 16 output columns, the grid sizes follow:
 
-| projection | outputs | blocks at 16/block | blocks per SM (28 SMs) |
-| --- | --- | --- | --- |
-| k_proj, v_proj | 256 | 16 | **0.6, so 12 SMs get nothing** |
-| q_proj, o_proj | 1536 | 96 | 3.4 |
-| gate_proj, up_proj | 8960 | 560 | 20.0 |
-| lm_head | 151936 | 9496 | 339.1 |
+| projection | kernel | outputs | blocks at 16/block | blocks per SM (28 SMs) |
+| --- | --- | --- | --- | --- |
+| k_proj, v_proj | `gemvx::kernel` | 256 | **not derivable, see below** | |
+| q_proj, o_proj | `gemv2T_kernel_val` | 1536 | 96 | 3.4 |
+| gate_proj, up_proj | `gemv2T_kernel_val` | 8960 | 560 | 20.0 |
+| lm_head | `gemv2T_kernel_val` | 151936 | 9496 | 339.1 |
 
-That single column predicts the whole shape of the results table. Fewer blocks
-than SMs means the card is idle by construction, and 16 blocks over 28 SMs
-cannot exceed 57% utilisation no matter how good the kernel is. It also predicts
-that the fix is not a better kernel but a different decomposition, splitting the
-reduction dimension to manufacture parallelism.
+**The two projections the argument most needs do not run this kernel.** `k_proj`
+and `v_proj` dispatch to `internal::gemvx::kernel`, whose template arguments are
+`<false, true, true, false, 7, false>`: five bools and a 7, with no tile
+parameter visible in the symbol at all. So the 16-outputs-per-block reading
+cannot be carried over to them, and any specific block count for the 33% rows
+would be invented rather than derived.
 
-**This interpretation of `128, 16` is a hypothesis, not a read fact.** cuBLAS is
-closed source. What makes it worth stating is that it is testable in one command
-on the box: `ncu --metrics launch__grid_size,launch__block_size` reports the
-real grid, and if `k_proj` does not launch 16 blocks the explanation above is
-wrong and needs replacing. Recorded as open, below.
+What survives without that number is weaker but still quantitative. Whatever the
+tiling, a projection with 256 output columns has 256 units of output-side
+parallelism against 28 SMs each wanting multiple resident warps, so it can only
+fill the machine by splitting the 1536-long reduction, which this kernel gives no
+sign of doing (there is no reduction epilogue after it, unlike `down_proj`).
+Fewer blocks than SMs means idle silicon by construction, and that is the
+qualitative claim the 33% supports. The `gemv2T` rows above are on firmer ground,
+since they at least share a kernel with the template being read.
+
+**Both readings are hypotheses, not read facts.** cuBLAS is closed source. What
+makes them worth stating is that `ncu --metrics launch__grid_size,launch__block_size`
+settles them in one command, and the regex has to cover both families
+(`--kernel-name regex:gemv` catches `gemv2T` and `gemvx`; `regex:gemv2T` would
+silently skip the very projections in question). If `gemv2T` does not launch 560
+blocks for `gate_proj`, the reading of `128, 16` is wrong and every row of this
+table goes with it. Recorded as open, below.
 
 **down_proj, 83%, and the shape is the whole reason.** It reads exactly the same
 27.53 MB as `gate_proj` and takes 15.7 us longer, and it is not even the same
@@ -424,10 +436,31 @@ Note that the argument runs from bandwidth back to access pattern. It is sound
 as far as it goes, because 96% of achievable leaves no room for a scattered
 access pattern, but it does not distinguish the second scheme from other
 coalescing layouts, and it does not measure sector efficiency directly. The
-direct evidence is `ncu --metrics
-l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio`,
-where 2.0 sectors per request would confirm the fp16 pair-wise coalescing above
-and 32.0 would refute the whole paragraph.
+direct evidence comes from `ncu`, and the decisive metric is `dram__bytes_read.sum`
+rather than a sector ratio.
+
+The reason to prefer DRAM bytes is that sectors per request cannot be read
+against a fixed number without knowing the load width. A fully coalesced warp
+doing 2-byte scalar loads touches 64 bytes, so 2 sectors per request; the same
+warp doing 16-byte vector loads touches 512 bytes, so 16 sectors per request, and
+16 is perfect rather than bad. Quoting "2.0 confirms and 32.0 refutes" ignores
+that and would score a well-vectorised kernel as a failure.
+
+DRAM bytes has no such ambiguity. Every weight byte in a GEMV is used exactly
+once, globally, so nothing can be served from cache and sector waste has nowhere
+to hide: fetched sectors have to land in DRAM traffic. For `gate_proj` the
+prediction is `dram__bytes_read.sum` of about 27.5 MB. A 4-useful-bytes-per-32
+scatter would read closer to 220 MB and would have shown up as 8x the runtime
+anyway, which is the consistency check between this metric and the timing.
+
+```
+ncu --metrics dram__bytes_read.sum,\
+l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio,\
+l1tex__t_requests_pipe_lsu_mem_global_op_ld.sum ...
+```
+
+Take the ratio as a diagnostic to be interpreted against the observed request
+count, not as a pass or fail on its own.
 
 The activation vector is the other operand and it does not need coalescing at
 all. All 1536 elements, 3 KB, are read by every block, so after the first block
@@ -516,12 +549,17 @@ between an open item and an unwritten section.
 **Affecting Part 2's conclusions:**
 
 1. **Confirm the grid geometry.** `ncu --metrics launch__grid_size,launch__block_size`
-   on the `gemv2T` kernel. The prediction is 16 blocks of 128 threads for
-   `k_proj` and 560 for `gate_proj`. If `k_proj` launches many more blocks than
-   16, the occupancy explanation for the 33% row is wrong and has to be
-   rewritten around whatever the real limiter is.
-2. **Confirm coalescing directly.** Sectors per global load request on the same
-   kernel. 2.0 confirms the cooperative layout inferred above, 32.0 refutes it.
+   with `--kernel-name regex:gemv`, which has to cover both `gemv2T_kernel_val`
+   and `gemvx::kernel`: `k_proj` and `v_proj` run the second, so a `gemv2T` regex
+   would skip the two projections the 33% argument is about. The prediction is
+   560 blocks of 128 threads for `gate_proj`. For `k_proj` there is no derived
+   prediction, only the qualitative claim that its grid cannot fill 28 SMs, and
+   the measurement is what turns that into a number.
+2. **Confirm coalescing directly.** `dram__bytes_read.sum` on the `gemv2T`
+   kernel serving `gate_proj`. The prediction is about 27.5 MB, equal to the
+   weight matrix, since a GEMV uses each byte once and sector waste therefore
+   cannot hide in cache. Sectors per request is a diagnostic alongside it, not a
+   pass or fail, because the right value depends on the load width.
 
 **Affecting Part 1's conclusions:**
 
