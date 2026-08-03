@@ -28,12 +28,13 @@ This is Week 4 Part C, unchanged and now due.
 
 This is Week 5 Part B, unchanged and now due. The gate is the deliverable, not a feeling of readiness.
 
-- [ ] **Take the gate on a kernel you did not write (about 5 hours).** Naive against tiled matmul from GPU MODE lecture 5 is the cleanest choice. Write it in `docs/gate-phase2.md` with numbers, not adjectives:
+- [x] **Take the gate on a kernel you did not write (about 5 hours).** Naive against tiled matmul from GPU MODE lecture 5 is the cleanest choice. Write it in `docs/gate-phase2.md` with numbers, not adjectives:
   - bytes read from global memory per output element, naive against tiled, and the arithmetic intensity that follows from each
   - which loads coalesce and which do not, and why, at the level of what a single warp touches in one instruction
   - the occupancy math for your chosen tile size on sm_86: shared memory per block, registers per thread, resulting blocks per SM
   If any of these three needs hand-waving, that is the part to go back and fix, not to write around.
-  This item was ticked on 2026-08-03 while `docs/gate-phase2.md` did not exist. Unticked. It is the exact failure Part D exists to prevent, so it is left visible rather than quietly corrected.
+  This item was ticked once on 2026-08-03 while `docs/gate-phase2.md` did not exist. Unticked then, earned now. Left visible because it is the exact failure Part D exists to prevent.
+  Landed: Part 1 of `docs/gate-phase2.md`. All three bullets derived exactly. Intensity is symbolic in `N` and `T`, and `N` cancels: naive is 0.25 FLOP/byte, tiled is `T/4`, so tiling multiplies intensity by exactly `T`. Coalescing is worked for both index mappings, which is the point: `threadIdx.x -> Col` makes the B load contiguous and the A load a 2-way broadcast, and swapping to `threadIdx.x -> Row` turns the same source into a 16-way scatter, so "naive matmul is uncoalesced" is only half a statement. Shared memory is checked separately for bank conflicts and there are none at either tile size in this layout. Occupancy is parametric in registers per thread: `T = 16` gives 6 blocks and 100%, `T = 32` gives 1 block and 66.7% while doubling intensity, and the doc says plainly that which one wins is the single call a hand calculation cannot settle.
 
 - [ ] **Take the gate on your own trace (about 3 hours).** Pick one kernel out of the HF decode trace from Part A and diagnose it the same way. Passing on someone else's kernel is the bar. Passing on your own decode path is the proof, and it is also the thing that makes the profiling doc worth reading.
   Landed: `scripts/dump_step_kernels.py` (one step, kernel by kernel), `scripts/roofline_step.py` (every matmul against the measured bandwidth ceiling), `results/hf_decode_step_kernels.txt`, `results/roofline_step.csv`, and the own-trace half of `docs/gate-phase2.md`. The step is 42 kernels x 28 layers plus a head and a tail, one division predicts all eight matmul shapes across a 590x size range, and 86.6% of the idle gaps are the CPU arriving late rather than the device queueing.

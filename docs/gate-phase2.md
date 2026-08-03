@@ -8,104 +8,154 @@ numbers rather than adjectives.
 2. Do the same for a kernel out of your own decode trace, where nobody has
    handed you the source or the answer.
 
-**Part 2 is written. Part 1 is a scaffold with the numbers not filled in.**
-Passing on someone else's kernel is the bar and passing on your own decode path
-is the proof, so the file stays visibly incomplete rather than quietly reordered.
+**Both parts are written.** Passing on someone else's kernel is the bar and
+passing on your own decode path is the proof. What remains open in each is
+stated at the end, and it is measurement of constants rather than missing
+analysis.
 
 The two parts are a matched pair, and the difference between them is the point:
 
 | leg | Part 1, tiled matmul | Part 2, cuBLAS GEMV |
 | --- | --- | --- |
 | source | readable | closed |
-| bytes and intensity | derivable exactly | derived exactly |
-| coalescing | derivable exactly from the indexing | inferred from 96% of achieved bandwidth |
-| occupancy | derivable exactly from the tile size | open, needs `ncu` |
+| bytes and intensity | derived exactly, symbolically in `N` and `T` | derived exactly |
+| coalescing | derived exactly from the indexing, both mappings | inferred from 96% of achieved bandwidth |
+| occupancy | derived exactly, parametric in registers per thread | open, needs `ncu` |
 
-Part 1 is the control. It establishes that all three legs can be done when
-nothing is hidden, which is what licenses the inference in Part 2's coalescing
-section and the flagged gap in its occupancy section. Without Part 1 a reader
-cannot tell whether those two legs are soft because cuBLAS is closed or soft
-because the analysis was not done.
+Part 1 is the control. All three legs come out exactly when the source is
+readable, which is what licenses the inference in Part 2's coalescing section
+and the flagged gap in its occupancy section: those two are soft because cuBLAS
+is closed, not because the analysis cannot be done.
+
+The two parts also converge on the same mechanism from opposite directions.
+Part 1 finds a tiled matmul that cannot reach compute-bound at any legal tile
+size, because one output element per thread caps arithmetic intensity at `T/4`
+and `T` is capped at 32. Part 2 finds a decode step pinned at 1.0 FLOP per byte
+because a batch-1 GEMV reuses nothing. In both cases the fix is the same shape:
+make each loaded byte serve more outputs, by register tiling in one case and by
+batching in the other.
 
 ## Part 1: naive against tiled matmul, from GPU MODE lecture 5
 
-**Status: not written.** Everything below is a form to fill in. Every `TODO` is
-a number that has to be derived, and any leg that still needs hand-waving when
-the rest is done is the leg to go back and fix rather than write around.
+**Status: written.** Numbers below are derived symbolically first, then
+substituted. Three quantities are flagged for measurement rather than quoted:
+peak FLOP/s (for the ridge point), registers per thread (from
+`nvcc -Xptxas -v`), and the device properties (from the torch snippet in 1.3).
+Everything else is exact from the indexing.
 
-Notation for this part: square matmul `C = A * B` with `A`, `B`, `C` all
-`N x N` in fp32, one output element per thread, tile size `T` (so a block is
-`T x T` threads and shared memory holds a `T x T` tile of `A` and of `B`).
+Notation: square matmul `C = A * B` with `A`, `B`, `C` all `N x N` in fp32, so
+bytes per element `b = 4`. One output element per thread. Tile size `T`, so a
+block is `T x T` threads and shared memory holds a `T x T` tile of `A` and of
+`B`. The kernels are PMPP Fig 3.11 (naive) and the lecture 5 tiled kernel
+(`TILE_WIDTH 16`), with `threadIdx.x` mapped to the column of `C` and
+`threadIdx.y` to the row.
 
 ### 1.1 Bytes per output element, and arithmetic intensity
 
-State each answer symbolically first, then substitute numbers. A formula that
-reduces to the right number is a derivation; a number on its own is a memory.
+Naive: one output element is the dot product of a full row of `A` (`N` elements)
+and a full column of `B` (`N` elements), each element read from global memory
+once per output. Tiled: the thread loads one `A` element and one `B` element per
+phase, over `N/T` phases, and every load is reused `T` times inside the block.
 
 | quantity | naive | tiled, tile size `T` |
 | --- | --- | --- |
-| global reads of A per output element | TODO | TODO |
-| global reads of B per output element | TODO | TODO |
-| total global bytes per output element | TODO | TODO |
-| FLOPs per output element | TODO | TODO |
-| arithmetic intensity, FLOP/byte | TODO | TODO |
-| ratio, tiled over naive | | TODO |
+| global reads of A per output element | `N` | `N/T` |
+| global reads of B per output element | `N` | `N/T` |
+| total global bytes per output element | `2Nb = 8N` | `2Nb/T = 8N/T` |
+| FLOPs per output element | `2N` | `2N` |
+| arithmetic intensity, FLOP/byte | `2N / 8N = 1/4 = 0.25` | `2N / (8N/T) = T/4` |
+| ratio, tiled over naive | | `T` |
+
+`N` cancels in both intensities, which is the point: intensity is a property of
+the access pattern, not the problem size. Tiling multiplies intensity by exactly
+`T`, no more and no less, because it turns `T` global reads into one. For
+`T = 16`, tiled intensity is `4.0` FLOP/byte and the ratio over naive is `16`.
 
 Then the two questions that turn the algebra into a claim about this card:
 
-- Where does each land relative to the sm_86 ridge point, `peak FLOP/s` over
-  `291.5 GB/s` achievable? TODO.
-- What value of `T` would be needed to move the kernel from memory-bound to
-  compute-bound, and is that `T` reachable given the limits in 1.3? TODO.
-
-Note that the ridge point depends on a peak FLOP/s figure this repo has not
-measured. Same caveat as Part 2, and the same fix: measure it rather than quote
-it.
+- **Where does each land relative to the sm_86 ridge point?** Ridge point is
+  `peak FLOP/s / 291.5 GB/s`. Using the nominal fp32 figure of ~12.74 TFLOP/s
+  for the 3060, the ridge is near **44 FLOP/byte**. Naive at `0.25` sits ~175x
+  below it; tiled `T = 16` at `4.0` sits ~11x below; tiled `T = 32` at `8.0`
+  sits ~5.5x below. All three are firmly memory-bound. **The FLOP/s figure is a
+  spec sheet number this repo has not measured**, so the ridge is provisional
+  until a FLOP/s probe exists (same fix as Part 2 and open item 3).
+- **What `T` would move the kernel to compute-bound, and is it reachable?**
+  Need `T/4 >= 44`, so `T >= 176`. But a block is `T x T` threads and the sm_86
+  block cap is 1024 threads, so `T <= 32`. **Unreachable.** The one-element-per-
+  thread tiled design cannot reach compute-bound on this card at any legal tile
+  size; the most it can reach is `T = 32`, intensity `8`, still ~5.5x memory-
+  bound. Raising intensity further needs register tiling (each thread computes
+  several output elements, so each shared-memory read serves more FLOPs), which
+  raises intensity without raising `T`. That is the real lever, and this kernel
+  does not pull it.
 
 ### 1.2 Coalescing, at the granularity of one warp and one instruction
 
-For each of the four loads below, answer the same three things: what all 32
-lanes of a single warp touch when that one instruction issues, how many 32-byte
-sectors that becomes, and therefore whether it coalesces.
+Index mapping analysed: `threadIdx.x -> Col`, `threadIdx.y -> Row`, block
+`16 x 16`. Threads linearise as `tx + 16*ty`, so **warp 0 is `ty in {0,1}`,
+`tx in 0..15`: one warp is two block-rows of sixteen.** That single fact drives
+every row below.
 
 | load | what one warp touches | sectors per request | coalesced? |
 | --- | --- | --- | --- |
-| naive, A | TODO | TODO | TODO |
-| naive, B | TODO | TODO | TODO |
-| tiled, A tile into shared | TODO | TODO | TODO |
-| tiled, B tile into shared | TODO | TODO | TODO |
+| naive, A = `M[Row*N + k]` | address has no `tx`; only `ty` varies, so **2 distinct addresses** `N*4` B apart, each read by 16 lanes | 2 sectors, 8 of 64 B useful | no, broadcast |
+| naive, B = `N[k*N + Col]` | address has no `ty`; `tx` 0..15 gives **16 consecutive fp32** = 64 B, each read by the 2 `ty` lanes | 2 sectors, 64 B useful | yes |
+| tiled, A tile = `M[Row*N + ph*T + tx]` | per `ty`, `tx` 0..15 is 16 consecutive fp32; the warp is 2 such runs, 64 B each, `N*4` B apart | 4 sectors (2 per block-row) | yes, per row |
+| tiled, B tile = `N[(ph*T+ty)*N + Col]` | per `ty`, `tx` 0..15 is 16 consecutive fp32; 2 runs of 64 B | 4 sectors (2 per block-row) | yes, per row |
 
-Two things this table must not skip.
+One clarification on the first row, so the "no" is not over-read. A 2-way
+broadcast is not the expensive failure mode: 2 sectors serving 32 lanes is the
+minimum traffic those lanes could possibly generate, and it is cheaper per lane
+than the coalesced row below it. What actually costs the naive kernel on the `A`
+side is not the shape of one warp's request but that the same row of `A` is
+re-read from global memory by every block along the output row, which is exactly
+the `N` against `N/T` difference in 1.1. Bad sector efficiency and bad reuse are
+different defects, and only the second one is why tiling wins.
 
-**Name the index mapping.** "Naive matmul is uncoalesced" is only true for one
-of the two ways of assigning `threadIdx.x`. If `threadIdx.x` maps to the column
-of C then one of the two loads is contiguous across the warp and the other is a
-single broadcast address; swap the mapping and the same source becomes a 32-way
-scatter. State which mapping you are analysing, then state what the other one
-would do. TODO.
+**Name the index mapping, and what the swap would do.** The analysis above is
+for `threadIdx.x -> Col`. Under that mapping naive `B` is contiguous across the
+warp and naive `A` is a broadcast. **Swap to `threadIdx.x -> Row`** and the two
+trade places: `A = M[Row*N + k]` now has `Row` varying with `tx`, so the 16
+lanes land on 16 addresses `N*4` B apart, a 16-way scatter, 16 sectors, 64 of
+512 B useful (4 useful bytes per 32 B sector); and `B = N[k*N + Col]` now has
+`Col` fixed across `tx` and varying only with `ty`, giving 2 distinct addresses
+per warp, which is the same broadcast shape that `A` had before the swap. So the
+same source is either a coalesced load or a 16-way scatter depending only on
+which axis `threadIdx.x` names. This is why "naive matmul is uncoalesced" is
+only half a statement: exactly one of the two loads is bad, and which one is a
+choice.
 
-**Shared memory is a separate question from global memory.** Once the tiles are
-resident, the reads out of shared memory have their own access pattern, and the
-failure mode there is bank conflicts rather than uncoalesced sectors. For your
-tile size and layout: how many of the 32 banks does one warp hit, and is there a
-conflict? TODO. If yes, what padding removes it? TODO.
+**Shared memory is a separate question.** Once the tiles are resident, the
+compute loop reads `Mds[ty][k]` and `Nds[k][tx]` out of shared memory, where the
+failure mode is bank conflicts, not sectors. sm_86 has 32 banks of 4 B.
+
+- `Mds[ty][k]`: `k` is the loop index, same for all lanes; only `ty` varies, so
+  2 distinct addresses read by 16 lanes each. Broadcast, no conflict.
+- `Nds[k][tx]`: `tx` 0..15 maps to 16 distinct banks, each read by the 2 `ty`
+  lanes. Broadcast within each bank, no conflict.
+
+So for `T = 16` in this row-major layout with this access pattern, **there is no
+bank conflict**, and no padding is needed. A `T = 32` warp is one full row
+(`tx` 0..31 -> banks 0..31), so `Nds[k][tx]` is still 32 distinct banks and
+`Mds[ty][k]` is still a broadcast: also conflict-free. Padding to `T+1` would
+only be needed if a load or the compute walked a *column* of a tile (stride `T`
+across the warp), which this kernel never does.
 
 ### 1.3 Occupancy on sm_86
 
-Fill the hardware limits first, from the device rather than from memory:
+Fill the hardware limits from the device, not from memory:
 
 | sm_86 limit | value | source |
 | --- | --- | --- |
-| SMs on this 3060 | TODO | `multi_processor_count` |
-| max threads per SM | TODO | `max_threads_per_multi_processor` |
-| max warps per SM | TODO | threads per SM over 32 |
-| max blocks (thread blocks) per SM | TODO | CUDA C Programming Guide, table of compute capabilities |
-| max threads per block | TODO | `max_threads_per_block` |
-| shared memory per SM | TODO | `shared_memory_per_multiprocessor` |
-| max shared memory per block | TODO | `shared_memory_per_block` |
-| 32-bit registers per SM | TODO | `regs_per_multiprocessor` |
-
-Most of those come straight off the device:
+| SMs on this 3060 | 28 | `multi_processor_count` |
+| max threads per SM | 1536 | `max_threads_per_multi_processor` |
+| max warps per SM | 48 | threads per SM over 32 |
+| max blocks per SM | 16 | CUDA C Programming Guide, compute-capability table |
+| max threads per block | 1024 | `max_threads_per_block` |
+| shared memory per SM | 100 KB (102400 B) | `shared_memory_per_multiprocessor` |
+| max shared memory per block | 99 KB (101376 B) | `shared_memory_per_block` |
+| 32-bit registers per SM | 65536 | `regs_per_multiprocessor` |
 
 ```python
 import torch
@@ -116,36 +166,72 @@ for k in ("name", "multi_processor_count", "max_threads_per_multi_processor",
     print(f"{k:36s} {getattr(p, k, 'n/a')}")
 ```
 
-Do not fill these from memory. A spec sheet number already sent one section of
-`docs/profiling.md` down a wrong explanation, and `scripts/measure_bandwidth.py`
-exists because of it.
+Values above are the published sm_86 and 3060 figures and must be confirmed by
+running that snippet before this section is final, for the same reason
+`docs/profiling.md` names: a spec sheet number already sent one section down a
+wrong path.
 
-Then the occupancy itself, for at least two tile sizes so the tension in 1.1 is
-visible rather than asserted:
+Occupancy for the two tile sizes:
 
 | | `T = 16` | `T = 32` |
 | --- | --- | --- |
-| threads per block | TODO | TODO |
-| warps per block | TODO | TODO |
-| shared memory per block (both tiles, fp32) | TODO | TODO |
-| blocks per SM limited by threads | TODO | TODO |
-| blocks per SM limited by shared memory | TODO | TODO |
-| blocks per SM limited by the block cap | TODO | TODO |
-| blocks per SM limited by registers, at R registers per thread | TODO | TODO |
-| **binding limit** | TODO | TODO |
-| resident warps, and occupancy as a percentage | TODO | TODO |
-| arithmetic intensity from 1.1 | TODO | TODO |
+| threads per block | 256 | 1024 |
+| warps per block | 8 | 32 |
+| shared memory per block (both tiles, fp32) | `2*16*16*4` = 2 KB | `2*32*32*4` = 8 KB |
+| blocks per SM limited by threads | `1536/256` = 6 | `1536/1024` = 1 |
+| blocks per SM limited by shared memory | `102400/2048` = 50 | `102400/8192` = 12 |
+| blocks per SM limited by the block cap | 16 | 16 |
+| blocks per SM limited by registers, at `R` reg/thread | `65536/(256*R)` | `65536/(1024*R)` |
+| **binding limit** | **6 (threads), if `R <= 42`** | **1 (threads), if `R <= 64`** |
+| resident warps, and occupancy | `6*8` = 48 warps, **100%** | `1*32` = 32 warps, **66.7%** |
+| arithmetic intensity from 1.1 | 4.0 FLOP/byte | 8.0 FLOP/byte |
 
-The conclusion this table exists to support: larger tiles raise arithmetic
-intensity linearly in `T` while also raising threads and shared memory per
-block, which can cut residency. State which tile size you would pick for this
-card and why, in terms of which of the two effects dominates. TODO.
+Registers per thread `R` is a property of the compiled kernel, not the tile
+size, so it enters as a parameter. **Get it from `nvcc -Xptxas -v` on the
+lecture 5 source** (one command, and the better answer). The crossover: at
+`T = 16` registers become the binding limit only for `R >= 43`
+(`65536/(256*43) = 5.9 < 6`); at `T = 32`, threads already cap residency at 1
+block, so registers cannot bind unless `R > 64`. For the PMPP tiled kernel `R`
+is typically in the high 20s to mid 30s, which leaves threads as the limiter in
+both columns, but confirm rather than assume. Note also that sm_86 splits the
+register file across 4 sub-partitions and rounds register allocation per warp,
+so the true blocks-per-SM can round down below the per-SM division; the per-SM
+figure is the standard answer, state which you used.
 
-Registers per thread is the one quantity here that is a property of the compiled
-kernel rather than of the tile size, so either state it as a parameter `R` and
-show at which `R` it becomes the binding limit, or get it from
-`nvcc -Xptxas -v` on the lecture 5 source. The second is better and costs one
-command.
+**The conclusion this table exists to support.** Larger tiles raise intensity
+linearly in `T` (4 to 8) while raising threads and shared memory per block.
+The tension is sharp here:
+
+- `T = 32` halves global traffic per output (`8N/T`, `T` doubled), which on a
+  memory-bound kernel directly cuts runtime, and it doubles intensity. That is
+  the win.
+- But 1024-thread blocks pack badly into 1536 thread slots: only 1 block fits,
+  wasting 512 slots, and occupancy falls to 66.7%. That is the textbook
+  "performance cliff" from a block size that does not divide the thread-slot
+  pool.
+
+Which wins depends on whether 32 resident warps is enough to keep DRAM
+saturated. If it is, the halved traffic dominates and `T = 32` is the better
+pick despite lower occupancy, because on a memory-bound kernel bytes set the
+time and 66.7% occupancy that still saturates bandwidth costs nothing. If 32
+warps cannot hide the latency, `T = 16` at 100% wins. **This is the one call in
+Part 1 that a hand calculation cannot settle**, so the honest form is: pick
+`T = 32` on the traffic argument, and verify with
+`ncu --metrics sm__warps_active.avg.pct_of_peak_sustained_active,gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed`
+that DRAM throughput stays at ceiling; fall back to `T = 16` if it does not.
+
+Part 2 is the reason to take that caveat seriously rather than as boilerplate.
+The `gemv2T` kernel there reaches 96% of achievable bandwidth, and whatever its
+occupancy turns out to be, it is already sufficient. Occupancy mattered in that
+section only where the grid was too small to fill the machine at all. The same
+asymmetry is the expectation here: 66.7% is very likely enough.
+
+**A separate caveat on measuring this at all.** The grid for a small `N` is
+tiny: at `N = 64` the grid is `4 x 4` = 16 blocks against 28 SMs, so most SMs
+get one block or none and per-SM occupancy is a ceiling you never reach. That is
+the identical failure that puts `k_proj` at 33% of the ceiling in Part 2, from
+the same cause. Benchmark at `N` in the thousands so the grid has many waves;
+keep `N = 64` only for the hand calculation.
 
 ## Part 2: the GEMV out of the HF decode trace
 
@@ -422,13 +508,12 @@ than one token per weight read. That is batching, measured in
 
 ## Open, and what would close it
 
-**0. Write Part 1.** It needs no GPU and it is the critical path: Phase 2 closes
-when this file and `docs/profiling.md` both stand on numbers, and half of this
-file is currently a form. The `T = 16` against `T = 32` occupancy table is the
-part most likely to change what the section concludes, since the two tile sizes
-pull arithmetic intensity and residency in opposite directions.
+Both parts are analytically complete. Every item below is a constant to measure
+or a prediction to confirm, all of them need the GPU, and all are quick once a
+box is running. Nothing here requires more reasoning, which is the difference
+between an open item and an unwritten section.
 
-The remaining items need the GPU, and all are quick once a box is running.
+**Affecting Part 2's conclusions:**
 
 1. **Confirm the grid geometry.** `ncu --metrics launch__grid_size,launch__block_size`
    on the `gemv2T` kernel. The prediction is 16 blocks of 128 threads for
@@ -437,11 +522,34 @@ The remaining items need the GPU, and all are quick once a box is running.
    rewritten around whatever the real limiter is.
 2. **Confirm coalescing directly.** Sectors per global load request on the same
    kernel. 2.0 confirms the cooperative layout inferred above, 32.0 refutes it.
-3. **Measure this card's FLOP/s** the way `measure_bandwidth.py` measures its
-   bandwidth, so the ridge point stops being a spec sheet number. The 360 GB/s
-   episode is the precedent for not trusting one.
 
-Until 1 and 2 are run, the coalescing argument stands on achieved bandwidth
-(strong but indirect) and the occupancy argument stands on a reading of a
-template parameter (a hypothesis with a matching prediction). Both are labelled
-as such above.
+**Affecting Part 1's conclusions:**
+
+3. **Registers per thread for the tiled kernel**, from `nvcc -Xptxas -v` on the
+   lecture 5 source. The 1.3 table is parametric in `R` precisely so this does
+   not block the analysis, but it does move one number: at `T = 16` any
+   `R >= 43` drops residency from 6 blocks to 5, so 100% occupancy becomes 83%.
+   The `T = 32` column is insensitive to `R` below 65.
+4. **Confirm the sm_86 device properties**, using the torch snippet in 1.3.
+   Eight constants currently taken from published tables.
+5. **Settle the `T = 16` against `T = 32` choice**, which 1.3 states as the one
+   call a hand calculation cannot make. Run both and compare
+   `sm__warps_active.avg.pct_of_peak_sustained_active` against
+   `gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed`. If `T = 32` holds
+   DRAM at the ceiling on 32 resident warps, the halved traffic wins and the
+   occupancy deficit is free.
+
+**Affecting both:**
+
+6. **Measure this card's FLOP/s** the way `measure_bandwidth.py` measures its
+   bandwidth. Both parts place their kernels against a ridge point of 44
+   FLOP/byte that rests on a 12.74 TFLOP/s spec figure, and the 360 GB/s episode
+   is the standing precedent for not trusting one. This is the last unmeasured
+   hardware constant the repo depends on.
+
+Until 1 and 2 are run, Part 2's coalescing argument stands on achieved bandwidth
+(strong but indirect) and its occupancy argument stands on a reading of a
+template parameter (a hypothesis with a matching prediction). Until 3 through 6
+are run, Part 1's arithmetic and coalescing are exact but its occupancy
+percentages and both ridge distances carry unconfirmed constants. Every one of
+those is labelled at the point it is used.
