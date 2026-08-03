@@ -1,0 +1,1204 @@
+# results/trace_hf_decode.json.gz, step 2 of 5, segmented on annotation
+# 1198 kernels, 1198 CPU launches, 15.302 ms device busy
+# gap us = device idle before this event. s = * when the CPU had not yet issued the launch.
+    #  launch us     gpu us   wait us    dur us   gap us s  aten op                    kernel
+---------------------------------------------------------------------------------------------
+    0      135.5     1356.2   1203.74      3.68     0.00    embedding/index_select     indexSelectSmallIndex<2,2>
+    1      208.7     1361.0   1138.30      1.66     1.09    arange                     elementwise_kernel_with_index<1,4,1>
+    2      255.9     1363.7   1095.12      2.24     1.06    add                        vectorized_elementwise_kernel<2>
+    3      455.3     1367.3    896.03      2.94     1.41    to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+    4      559.9     1371.5    796.70      2.43     1.22    matmul/bmm                 gemmk1_kernel<256,5,true,false,false,false>
+    5      626.8     1375.0    734.32      2.94     1.06    cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,4>
+    6      667.1     1379.2    700.50      3.29     1.28    cos                        vectorized_elementwise_kernel<4,2,2,1>
+    7      712.2     1383.7    659.44      1.99     1.18    mul                        vectorized_elementwise_kernel<4>
+    8      749.8     1387.0    625.84      3.39     1.34    sin                        vectorized_elementwise_kernel<4,2,2,1>
+    9      788.8     1391.6    591.22      1.92     1.15    mul                        vectorized_elementwise_kernel<4>
+   10      839.8     1394.5    542.60      1.95     1.02    to/copy_                   vectorized_elementwise_kernel<4,1>
+   11      885.5     1397.5    500.75      1.89     1.06    to/copy_                   vectorized_elementwise_kernel<4,1>
+   12     1122.3     1400.5    261.53      3.58     1.15    to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+   13     1178.3     1405.2    213.84      1.98     1.06    pow                        vectorized_elementwise_kernel<4,1>
+   14     1225.8     1408.3    169.67      4.74     1.09    mean                       reduce_kernel<512,1>
+   15     1292.3     1414.2    109.11      1.86     1.22    add                        vectorized_elementwise_kernel<4>
+   16     1329.5     1417.2     76.35      2.11     1.09    rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+   17     1368.3     1420.5     40.91      2.50     1.22    mul                        elementwise_kernel<128,2>
+   18     1434.7     1448.4      0.53      1.95    25.41 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+   19     1475.4     1487.5      0.79      2.21    37.15 *  mul                        vectorized_elementwise_kernel<4>
+   20     1579.3     1594.3      0.55     20.19   104.61 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+   21     1688.9     1703.9      0.75      8.58    89.41 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+   22     1792.1     1806.4      0.66      7.90    93.89 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+   23     1873.4     1887.2      0.54      3.94    72.93 *  mul                        elementwise_kernel<128,4>
+   24     1946.2     1959.7      0.93      3.74    68.61 *  neg                        elementwise_kernel<128,4>
+   25     1991.0     2004.3      0.67      5.31    40.83 *  cat                        CatArrayBatchedCopy<4,64,64>
+   26     2039.3     2052.0      0.71      3.42    42.34 *  mul                        elementwise_kernel<128,4>
+   27     2078.5     2090.4      0.56      2.14    35.04 *  add                        vectorized_elementwise_kernel<4>
+   28     2116.3     2128.1      0.87      2.69    35.52 *  mul                        elementwise_kernel<128,4>
+   29     2181.7     2195.1      0.84      2.30    64.35 *  neg                        elementwise_kernel<128,4>
+   30     2224.0     2236.7      0.94      3.42    39.29 *  cat                        CatArrayBatchedCopy<4,64,64>
+   31     2263.2     2275.3      0.82      2.69    35.10 *  mul                        elementwise_kernel<128,4>
+   32     2298.2     2309.8      0.84      2.02    31.90 *  add                        vectorized_elementwise_kernel<4>
+   33     2350.6     2364.6      1.09      4.03    52.73 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+   34     2394.1     2406.7      1.01      3.74    38.08 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+   35     2544.9     2559.0      0.37     15.07   148.51 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+   36     2561.1     2575.4      7.11      6.27     1.38    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+   37     2696.1     2711.6      0.60     21.66   129.92 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+   38     2756.3     2769.8      0.52      2.53    36.51 *  add                        vectorized_elementwise_kernel<4>
+   39     2823.1     2837.6      0.60      4.29    65.28 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+   40     2871.8     2884.5      0.78      1.98    42.66 *  pow                        vectorized_elementwise_kernel<4,1>
+   41     2915.4     2928.7      0.94      4.90    42.21 *  mean                       reduce_kernel<512,1>
+   42     2964.5     2977.4      0.62      2.14    43.81 *  add                        vectorized_elementwise_kernel<4>
+   43     3000.9     3013.0      0.76      2.37    33.44 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+   44     3038.4     3050.7      0.83      2.88    35.33 *  mul                        elementwise_kernel<128,2>
+   45     3095.0     3108.6      0.91      1.98    55.01 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+   46     3134.5     3146.7      0.93      2.34    36.13 *  mul                        vectorized_elementwise_kernel<4>
+   47     3224.6     3239.3      0.66     97.38    90.27 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+   48     3282.7     3337.7     41.69      3.65     1.02    silu                       vectorized_elementwise_kernel<4,1,5,1>
+   49     3362.3     3376.8      0.92     97.57    35.46 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+   50     3411.5     3475.5     51.26      2.94     1.09    mul                        vectorized_elementwise_kernel<4>
+   51     3496.7     3510.2      1.08    112.96    31.77 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+   52     3510.7     3624.2    105.99      3.49     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+   53     3559.3     3628.8     56.88      2.56     1.09    add                        vectorized_elementwise_kernel<4>
+   54     3639.1     3654.0      0.82      4.13    22.69 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+   55     3688.1     3700.6      0.81      2.02    42.40 *  pow                        vectorized_elementwise_kernel<4,1>
+   56     3731.1     3744.0      0.89      4.67    41.41 *  mean                       reduce_kernel<512,1>
+   57     3779.3     3792.4      0.87      2.02    43.74 *  add                        vectorized_elementwise_kernel<4>
+   58     3815.4     3827.3      0.81      2.18    32.86 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+   59     3852.2     3864.0      0.88      2.69    34.53 *  mul                        elementwise_kernel<128,2>
+   60     3907.7     3920.8      0.60      1.95    54.08 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+   61     3947.1     3959.3      1.06      2.18    36.57 *  mul                        vectorized_elementwise_kernel<4>
+   62     4046.4     4061.5      0.31     20.09   100.00 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+   63     4154.3     4169.0      0.92      8.10    87.42 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+   64     4256.6     4270.8      0.61      8.00    93.73 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+   65     4336.8     4351.1      0.58      3.94    72.29 *  mul                        elementwise_kernel<128,4>
+   66     4409.5     4422.6      0.70      3.74    67.58 *  neg                        elementwise_kernel<128,4>
+   67     4453.7     4474.0      0.49      5.34    47.61 *  cat                        CatArrayBatchedCopy<4,64,64>
+   68     4504.5     4517.2      0.87      3.46    37.89 *  mul                        elementwise_kernel<128,4>
+   69     4542.6     4554.5      0.98      2.08    33.86 *  add                        vectorized_elementwise_kernel<4>
+   70     4579.6     4591.2      0.80      2.72    34.56 *  mul                        elementwise_kernel<128,4>
+   71     4644.0     4657.2      0.87      2.30    63.33 *  neg                        elementwise_kernel<128,4>
+   72     4685.8     4698.6      0.95      3.42    39.07 *  cat                        CatArrayBatchedCopy<4,64,64>
+   73     4724.6     4736.9      1.19      2.69    34.91 *  mul                        elementwise_kernel<128,4>
+   74     4759.3     4771.0      0.74      2.02    31.36 *  add                        vectorized_elementwise_kernel<4>
+   75     4808.3     4822.0      0.85      4.06    48.99 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+   76     4851.5     4863.9      1.00      3.74    37.82 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+   77     5000.5     5014.5      0.79     15.10   146.91 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+   78     5016.0     5030.7      7.41      6.27     1.06    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+   79     5150.5     5165.7      0.57     20.96   128.80 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+   80     5209.8     5223.3      0.70      2.50    36.61 *  add                        vectorized_elementwise_kernel<4>
+   81     5276.8     5291.4      0.78      4.35    65.57 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+   82     5325.6     5338.1      0.76      2.02    42.37 *  pow                        vectorized_elementwise_kernel<4,1>
+   83     5368.6     5381.5      0.68      4.83    41.44 *  mean                       reduce_kernel<512,1>
+   84     5439.3     5453.4      0.45      2.05    67.01 *  add                        vectorized_elementwise_kernel<4>
+   85     5478.3     5490.8      1.20      2.24    35.36 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+   86     5516.8     5529.6      0.74      2.85    36.57 *  mul                        elementwise_kernel<128,2>
+   87     5581.4     5595.5      0.53      2.02    63.04 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+   88     5623.0     5635.5      0.91      2.27    37.98 *  mul                        vectorized_elementwise_kernel<4>
+   89     5726.5     5741.2      0.73     97.92   103.42 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+   90     5784.5     5840.3     42.31      3.58     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+   91     5864.1     5878.7      0.87     98.81    34.88 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+   92     5913.5     5978.7     52.40      2.98     1.18    mul                        vectorized_elementwise_kernel<4>
+   93     5998.6     6012.2      1.03    113.09    30.50 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+   94     6012.8     6126.4    105.95      3.52     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+   95     6061.9     6131.1     56.50      2.59     1.18    add                        vectorized_elementwise_kernel<4>
+   96     6143.2     6158.5      1.03      4.06    24.83 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+   97     6192.4     6205.4      1.03      2.02    42.88 *  pow                        vectorized_elementwise_kernel<4,1>
+   98     6235.9     6248.7      0.80      4.67    41.28 *  mean                       reduce_kernel<512,1>
+   99     6284.0     6296.9      0.51      2.08    43.49 *  add                        vectorized_elementwise_kernel<4>
+  100     6320.5     6332.4      0.77      2.27    33.44 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  101     6357.6     6369.7      1.10      2.69    35.04 *  mul                        elementwise_kernel<128,2>
+  102     6413.4     6426.4      0.79      1.95    54.01 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  103     6452.2     6464.2      0.77      2.40    35.87 *  mul                        vectorized_elementwise_kernel<4>
+  104     6551.2     6566.4      0.53     19.97    99.71 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  105     6658.7     6673.4      0.81      8.19    87.10 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  106     6761.6     6775.7      0.68      7.97    94.08 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  107     6907.0     6921.7      0.33      4.03   138.04 *  mul                        elementwise_kernel<128,4>
+  108     6981.5     6995.3      0.83      3.68    69.53 *  neg                        elementwise_kernel<128,4>
+  109     7026.2     7044.0      0.73      5.31    45.09 *  cat                        CatArrayBatchedCopy<4,64,64>
+  110     7073.9     7086.5      0.93      3.42    37.12 *  mul                        elementwise_kernel<128,4>
+  111     7111.2     7123.2      0.71      2.05    33.34 *  add                        vectorized_elementwise_kernel<4>
+  112     7148.7     7160.5      1.04      2.66    35.23 *  mul                        elementwise_kernel<128,4>
+  113     7213.5     7226.9      1.09      2.30    63.74 *  neg                        elementwise_kernel<128,4>
+  114     7255.4     7268.3      0.95      3.49    39.07 *  cat                        CatArrayBatchedCopy<4,64,64>
+  115     7294.7     7306.7      0.82      2.69    34.91 *  mul                        elementwise_kernel<128,4>
+  116     7329.6     7341.4      0.94      2.05    32.03 *  add                        vectorized_elementwise_kernel<4>
+  117     7379.0     7392.6      0.88      4.00    49.12 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  118     7422.4     7435.0      0.99      3.65    38.40 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  119     7572.9     7587.0      0.55     15.10   148.41 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  120     7588.8     7603.3      7.17      6.27     1.18    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  121     7723.5     7739.2      0.60     21.57   129.57 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  122     7783.2     7797.0      1.18      2.53    36.25 *  add                        vectorized_elementwise_kernel<4>
+  123     7849.6     7864.1      0.59      4.26    64.57 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  124     7898.6     7911.3      0.74      1.98    42.97 *  pow                        vectorized_elementwise_kernel<4,1>
+  125     7942.1     7955.3      0.87      4.80    41.95 *  mean                       reduce_kernel<512,1>
+  126     7991.4     8004.6      0.63      2.08    44.57 *  add                        vectorized_elementwise_kernel<4>
+  127     8028.1     8040.0      0.83      2.24    33.31 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  128     8065.5     8077.8      0.76      2.66    35.58 *  mul                        elementwise_kernel<128,2>
+  129     8121.6     8135.3      0.81      1.98    54.75 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  130     8161.4     8173.5      0.83      2.27    36.26 *  mul                        vectorized_elementwise_kernel<4>
+  131     8250.9     8265.6      0.50     98.11    89.85 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  132     8309.1     8364.9     42.49      3.55     1.12    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  133     8389.8     8404.4      1.05     97.98    35.97 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  134     8438.9     8503.6     52.41      2.91     1.28    mul                        vectorized_elementwise_kernel<4>
+  135     8523.7     8537.2      1.19    114.75    30.65 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  136     8537.6     8653.0    107.74      3.55     1.02    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  137     8586.4     8657.7     58.70      2.59     1.22    add                        vectorized_elementwise_kernel<4>
+  138     8666.8     8682.0      1.04      4.06    21.69 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  139     8715.5     8728.3      0.66      2.02    42.18 *  pow                        vectorized_elementwise_kernel<4,1>
+  140     8758.6     8771.9      0.87      4.70    41.57 *  mean                       reduce_kernel<512,1>
+  141     8807.3     8820.5      0.95      1.98    43.94 *  add                        vectorized_elementwise_kernel<4>
+  142     8843.5     8855.8      0.89      2.24    33.31 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  143     8880.4     8892.6      1.00      2.72    34.59 *  mul                        elementwise_kernel<128,2>
+  144     8936.1     8949.5      0.68      1.98    54.14 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  145     8975.2     8987.5      0.90      2.21    36.03 *  mul                        vectorized_elementwise_kernel<4>
+  146     9073.8     9088.8      0.52     20.13    99.14 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  147     9181.7     9196.5      0.67      8.03    87.58 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  148     9284.7     9299.1      0.95      7.84    94.56 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  149     9365.0     9379.1      0.62      3.97    72.09 *  mul                        elementwise_kernel<128,4>
+  150     9446.7     9460.5      0.56      3.78    77.44 *  neg                        elementwise_kernel<128,4>
+  151     9491.6     9505.2      0.94      5.28    40.99 *  cat                        CatArrayBatchedCopy<4,64,64>
+  152     9533.5     9545.8      0.82      3.46    35.30 *  mul                        elementwise_kernel<128,4>
+  153     9570.7     9582.7      0.98      2.05    33.44 *  add                        vectorized_elementwise_kernel<4>
+  154     9607.9     9625.1      0.64      2.72    40.35 *  mul                        elementwise_kernel<128,4>
+  155     9679.4     9692.7      0.85      2.30    64.83 *  neg                        elementwise_kernel<128,4>
+  156     9721.1     9733.8      0.86      3.46    38.85 *  cat                        CatArrayBatchedCopy<4,64,64>
+  157     9760.5     9772.6      1.08      2.69    35.33 *  mul                        elementwise_kernel<128,4>
+  158     9795.7     9807.3      0.69      2.05    32.00 *  add                        vectorized_elementwise_kernel<4>
+  159     9844.7     9858.6      0.86      4.00    49.25 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  160     9888.0     9900.3      0.74      3.68    37.76 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  161    10037.4    10052.0      0.73     15.10   147.97 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  162    10053.5    10068.3      7.49      6.27     1.22    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  163    10187.5    10202.8      0.49     21.44   128.19 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  164    10247.2    10260.8      0.93      2.53    36.61 *  add                        vectorized_elementwise_kernel<4>
+  165    10313.6    10328.1      0.74      4.38    64.77 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  166    10362.0    10374.6      0.82      1.98    42.08 *  pow                        vectorized_elementwise_kernel<4,1>
+  167    10405.3    10418.2      0.81      4.83    41.66 *  mean                       reduce_kernel<512,1>
+  168    10454.2    10467.3      0.91      1.86    44.22 *  add                        vectorized_elementwise_kernel<4>
+  169    10490.7    10502.6      0.96      2.27    33.50 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  170    10527.9    10540.1      0.87      2.85    35.20 *  mul                        elementwise_kernel<128,2>
+  171    10584.2    10597.5      0.69      1.98    54.56 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  172    10623.6    10635.8      1.10      2.30    36.26 *  mul                        vectorized_elementwise_kernel<4>
+  173    10712.5    10727.1      0.61     99.33    88.99 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  174    10770.2    10827.5     44.13      3.62     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  175    10850.0    10864.7      1.06     97.79    33.54 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  176    10899.1    10963.8     52.08      2.88     1.28    mul                        vectorized_elementwise_kernel<4>
+  177    10983.3    10996.7      1.22    113.57    30.11 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  178    10997.1    11111.4    106.53      3.52     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  179    11045.9    11116.1     57.32      2.59     1.18    add                        vectorized_elementwise_kernel<4>
+  180    11126.5    11141.7      1.03      4.03    23.01 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  181    11175.4    11188.5      0.96      1.99    42.72 *  pow                        vectorized_elementwise_kernel<4,1>
+  182    11218.8    11231.6      0.83      4.67    41.18 *  mean                       reduce_kernel<512,1>
+  183    11266.7    11279.7      0.73      2.05    43.39 *  add                        vectorized_elementwise_kernel<4>
+  184    11302.5    11314.2      0.83      2.24    32.48 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  185    11339.2    11351.3      1.00      2.72    34.82 *  mul                        elementwise_kernel<128,2>
+  186    11395.0    11408.1      0.79      1.95    54.11 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  187    11434.2    11446.0      0.81      2.27    36.00 *  mul                        vectorized_elementwise_kernel<4>
+  188    11532.4    11547.5      0.55     20.22    99.14 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  189    11640.4    11655.5      0.80      8.19    87.84 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  190    11743.3    11757.6      0.63      7.94    93.92 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  191    11823.5    11842.3      0.29      3.97    76.70 *  mul                        elementwise_kernel<128,4>
+  192    11901.6    11915.3      0.86      3.74    69.02 *  neg                        elementwise_kernel<128,4>
+  193    11946.2    11960.0      0.83      5.41    40.96 *  cat                        CatArrayBatchedCopy<4,64,64>
+  194    11988.3    12000.5      0.91      3.46    35.14 *  mul                        elementwise_kernel<128,4>
+  195    12025.1    12036.9      0.73      2.05    32.96 *  add                        vectorized_elementwise_kernel<4>
+  196    12062.2    12074.0      1.01      2.69    35.01 *  mul                        elementwise_kernel<128,4>
+  197    12134.7    12148.3      0.82      2.30    71.65 *  neg                        elementwise_kernel<128,4>
+  198    12177.2    12190.1      1.00      3.52    39.52 *  cat                        CatArrayBatchedCopy<4,64,64>
+  199    12216.3    12228.5      0.82      2.69    34.85 *  mul                        elementwise_kernel<128,4>
+  200    12251.8    12263.7      0.84      2.05    32.48 *  add                        vectorized_elementwise_kernel<4>
+  201    12301.0    12314.7      0.97      4.03    48.96 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  202    12344.1    12356.8      1.01      3.68    38.08 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  203    12492.6    12506.7      0.50     15.07   146.27 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  204    12508.6    12523.0      7.26      6.27     1.22    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  205    12642.3    12657.8      0.59     21.54   128.48 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  206    12702.6    12716.4      0.67      2.27    37.06 *  add                        vectorized_elementwise_kernel<4>
+  207    12769.1    12783.7      0.67      4.38    65.02 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  208    12817.6    12830.5      0.78      1.98    42.43 *  pow                        vectorized_elementwise_kernel<4,1>
+  209    12861.4    12874.7      0.93      4.96    42.21 *  mean                       reduce_kernel<512,1>
+  210    12911.1    12924.2      0.69      2.08    44.57 *  add                        vectorized_elementwise_kernel<4>
+  211    12947.4    12959.4      0.95      2.27    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  212    12984.2    12996.5      0.83      2.65    34.91 *  mul                        elementwise_kernel<128,2>
+  213    13040.5    13054.1      0.95      1.98    54.88 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  214    13079.6    13091.6      0.86      2.30    35.52 *  mul                        vectorized_elementwise_kernel<4>
+  215    13168.6    13183.0      0.55     98.14    89.12 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  216    13226.2    13282.4     42.89      3.62     1.22    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  217    13306.2    13320.9      0.92     97.98    34.91 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  218    13355.7    13420.0     51.59      2.91     1.12    mul                        vectorized_elementwise_kernel<4>
+  219    13449.5    13463.2      1.15    114.40    40.26 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  220    13463.6    13578.8    107.45      3.58     1.22    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  221    13513.3    13583.5     57.25      2.59     1.12    add                        vectorized_elementwise_kernel<4>
+  222    13594.4    13609.6      0.92      4.13    23.52 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  223    13643.7    13656.5      0.83      2.02    42.82 *  pow                        vectorized_elementwise_kernel<4,1>
+  224    13687.3    13700.2      0.96      4.67    41.70 *  mean                       reduce_kernel<512,1>
+  225    13735.5    13748.8      0.85      2.02    43.84 *  add                        vectorized_elementwise_kernel<4>
+  226    13772.0    13783.8      0.95      2.21    33.05 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  227    13808.3    13820.2      0.79      2.78    34.14 *  mul                        elementwise_kernel<128,2>
+  228    13864.1    13877.4      0.70      1.98    54.43 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  229    13903.3    13915.3      1.06      2.21    35.97 *  mul                        vectorized_elementwise_kernel<4>
+  230    14001.5    14016.5      0.62     20.38    98.97 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  231    14109.3    14124.6      0.86      8.13    87.71 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  232    14212.9    14227.2      0.59      7.94    94.40 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  233    14293.5    14307.4      0.71      3.97    72.32 *  mul                        elementwise_kernel<128,4>
+  234    14364.1    14377.4      0.73      3.71    65.98 *  neg                        elementwise_kernel<128,4>
+  235    14408.2    14421.4      0.93      5.28    40.29 *  cat                        CatArrayBatchedCopy<4,64,64>
+  236    14449.4    14461.8      0.85      3.46    35.17 *  mul                        elementwise_kernel<128,4>
+  237    14486.7    14498.8      1.01      2.05    33.50 *  add                        vectorized_elementwise_kernel<4>
+  238    14523.6    14535.1      0.95      2.66    34.34 *  mul                        elementwise_kernel<128,4>
+  239    14587.1    14600.2      0.70      2.30    62.43 *  neg                        elementwise_kernel<128,4>
+  240    14697.6    14711.6      0.91      3.46   109.09 *  cat                        CatArrayBatchedCopy<4,64,64>
+  241    14740.1    14752.7      1.06      2.69    37.66 *  mul                        elementwise_kernel<128,4>
+  242    14776.0    14787.8      0.77      2.05    32.32 *  add                        vectorized_elementwise_kernel<4>
+  243    14826.3    14839.8      0.91      3.94    49.95 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  244    14869.4    14881.9      0.76      3.68    38.18 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  245    15018.7    15032.9      0.59     15.07   147.39 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  246    15034.7    15049.2      7.19      6.27     1.22    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  247    15169.1    15184.3      0.40     21.57   128.83 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  248    15229.2    15242.8      0.72      2.27    36.96 *  add                        vectorized_elementwise_kernel<4>
+  249    15296.5    15311.5      0.97      4.26    66.33 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  250    15345.4    15358.0      0.84      1.98    42.27 *  pow                        vectorized_elementwise_kernel<4,1>
+  251    15388.6    15401.8      0.78      4.83    41.82 *  mean                       reduce_kernel<512,1>
+  252    15437.8    15450.9      0.79      2.11    44.29 *  add                        vectorized_elementwise_kernel<4>
+  253    15473.9    15486.2      1.00      2.27    33.18 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  254    15511.4    15523.9      0.74      2.85    35.42 *  mul                        elementwise_kernel<128,2>
+  255    15568.3    15581.6      0.65      2.02    54.81 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  256    15607.7    15619.9      0.99      2.24    36.32 *  mul                        vectorized_elementwise_kernel<4>
+  257    15696.7    15711.7      0.69     97.38    89.53 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  258    15755.0    15810.3     42.08      3.55     1.28    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  259    15834.8    15849.3      0.94     97.89    35.45 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  260    15884.1    15948.3     51.52      2.91     1.09    mul                        vectorized_elementwise_kernel<4>
+  261    15968.6    15982.1      1.16    112.38    30.85 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  262    15982.5    16095.5    105.37      3.55     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  263    16031.3    16100.2     56.21      2.62     1.15    add                        vectorized_elementwise_kernel<4>
+  264    16112.0    16127.2      0.91      4.06    24.32 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  265    16161.0    16173.7      1.05      2.02    42.46 *  pow                        vectorized_elementwise_kernel<4,1>
+  266    16204.2    16217.1      0.79      4.70    41.34 *  mean                       reduce_kernel<512,1>
+  267    16252.2    16265.3      0.90      2.08    43.49 *  add                        vectorized_elementwise_kernel<4>
+  268    16288.0    16299.7      0.90      2.24    32.38 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  269    16325.2    16337.4      0.99      2.75    35.39 *  mul                        elementwise_kernel<128,2>
+  270    16381.4    16394.5      0.62      1.95    54.43 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  271    16421.0    16433.0      0.86      2.21    36.51 *  mul                        vectorized_elementwise_kernel<4>
+  272    16520.1    16535.1      0.55     20.00    99.87 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  273    16627.8    16642.7      0.87      8.16    87.65 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  274    16730.5    16744.7      0.63      8.00    93.82 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  275    16810.7    16824.5      0.57      3.97    71.84 *  mul                        elementwise_kernel<128,4>
+  276    16882.9    16896.3      0.84      3.74    67.77 *  neg                        elementwise_kernel<128,4>
+  277    16927.2    16940.6      0.95      5.31    40.54 *  cat                        CatArrayBatchedCopy<4,64,64>
+  278    16968.5    16980.9      0.90      3.42    35.04 *  mul                        elementwise_kernel<128,4>
+  279    17005.2    17017.4      0.85      2.05    33.06 *  add                        vectorized_elementwise_kernel<4>
+  280    17042.2    17054.1      1.00      2.69    34.65 *  mul                        elementwise_kernel<128,4>
+  281    17106.3    17119.6      0.91      2.34    62.85 *  neg                        elementwise_kernel<128,4>
+  282    17148.2    17166.4      0.80      3.46    44.38 *  cat                        CatArrayBatchedCopy<4,64,64>
+  283    17194.7    17206.9      0.76      2.69    37.12 *  mul                        elementwise_kernel<128,4>
+  284    17230.7    17242.5      0.78      2.02    32.83 *  add                        vectorized_elementwise_kernel<4>
+  285    17280.2    17293.7      0.87      3.94    49.21 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  286    17323.2    17336.1      1.26      3.71    38.43 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  287    17480.0    17494.4      0.47     15.17   154.62 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  288    17496.4    17510.6      7.10      6.27     1.09    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  289    17630.2    17645.8      0.83     21.60   128.83 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  290    17689.8    17703.4      0.65      2.66    36.06 *  add                        vectorized_elementwise_kernel<4>
+  291    17756.0    17770.6      0.53      4.22    64.57 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  292    17804.9    17817.4      0.85      2.02    42.53 *  pow                        vectorized_elementwise_kernel<4,1>
+  293    17848.5    17861.7      1.08      4.90    42.24 *  mean                       reduce_kernel<512,1>
+  294    17897.3    17910.3      0.90      2.05    43.74 *  add                        vectorized_elementwise_kernel<4>
+  295    17933.1    17945.2      0.84      2.24    32.83 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  296    17970.7    17982.9      0.81      2.88    35.46 *  mul                        elementwise_kernel<128,2>
+  297    18027.6    18040.8      0.68      1.95    55.01 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  298    18066.8    18078.9      0.93      2.30    36.22 *  mul                        vectorized_elementwise_kernel<4>
+  299    18155.9    18170.5      0.51     98.69    89.28 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  300    18213.6    18270.3     43.71      3.55     1.09    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  301    18292.5    18306.6      0.65     97.73    32.80 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  302    18342.0    18405.5     50.63      2.94     1.09    mul                        vectorized_elementwise_kernel<4>
+  303    18427.4    18440.5      1.01    114.08    32.06 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  304    18441.0    18555.8    107.11      3.49     1.22    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  305    18489.8    18560.6     58.01      2.59     1.38    add                        vectorized_elementwise_kernel<4>
+  306    18570.6    18585.7      1.08      4.13    22.46 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  307    18619.4    18632.0      0.94      1.98    42.24 *  pow                        vectorized_elementwise_kernel<4,1>
+  308    18662.4    18675.2      0.82      4.64    41.18 *  mean                       reduce_kernel<512,1>
+  309    18710.2    18723.3      0.92      2.05    43.49 *  add                        vectorized_elementwise_kernel<4>
+  310    18746.2    18757.9      0.59      2.21    32.48 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  311    18782.8    18794.9      0.81      2.75    34.85 *  mul                        elementwise_kernel<128,2>
+  312    18838.7    18852.1      0.70      1.98    54.43 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  313    18878.1    18890.4      1.08      2.17    36.29 *  mul                        vectorized_elementwise_kernel<4>
+  314    18976.6    18991.5      0.69     20.32    98.94 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  315    19083.2    19098.2      0.85      8.03    86.40 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  316    19186.5    19200.5      0.71      7.97    94.27 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  317    19266.2    19280.3      0.74      3.97    71.84 *  mul                        elementwise_kernel<128,4>
+  318    19337.9    19351.2      0.90      3.74    66.91 *  neg                        elementwise_kernel<128,4>
+  319    19381.4    19394.7      1.01      5.25    39.74 *  cat                        CatArrayBatchedCopy<4,64,64>
+  320    19422.6    19434.6      0.85      3.46    34.69 *  mul                        elementwise_kernel<128,4>
+  321    19459.6    19471.7      1.08      2.08    33.66 *  add                        vectorized_elementwise_kernel<4>
+  322    19496.7    19508.4      0.96      2.66    34.56 *  mul                        elementwise_kernel<128,4>
+  323    19560.5    19573.8      0.88      2.34    62.82 *  neg                        elementwise_kernel<128,4>
+  324    19602.2    19614.8      0.88      3.49    38.59 *  cat                        CatArrayBatchedCopy<4,64,64>
+  325    19641.0    19658.2      1.04      2.66    39.93 *  mul                        elementwise_kernel<128,4>
+  326    19683.5    19695.4      0.87      2.02    34.59 *  add                        vectorized_elementwise_kernel<4>
+  327    19733.3    19746.8      0.92      4.06    49.38 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  328    19776.2    19788.9      0.94      3.74    37.95 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  329    19926.3    19940.8      0.69     15.10   148.19 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  330    19942.4    19957.1      7.17      6.24     1.18    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  331    20076.8    20092.1      0.53     21.63   128.77 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  332    20136.6    20150.0      0.83      2.46    36.29 *  add                        vectorized_elementwise_kernel<4>
+  333    20202.9    20217.7      0.78      4.25    65.25 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  334    20251.6    20264.1      0.92      1.95    42.18 *  pow                        vectorized_elementwise_kernel<4,1>
+  335    20295.0    20307.8      0.85      4.90    41.73 *  mean                       reduce_kernel<512,1>
+  336    20343.4    20356.5      0.62      2.05    43.81 *  add                        vectorized_elementwise_kernel<4>
+  337    20379.9    20391.9      0.83      2.21    33.38 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  338    20416.7    20428.9      0.83      2.88    34.72 *  mul                        elementwise_kernel<128,2>
+  339    20472.8    20486.0      0.74      1.98    54.24 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  340    20512.3    20524.5      1.02      2.34    36.54 *  mul                        vectorized_elementwise_kernel<4>
+  341    20601.2    20616.2      0.77     97.63    89.31 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  342    20659.1    20714.8     42.80      3.58     1.02    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  343    20738.3    20752.9      1.05     99.17    34.53 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  344    20787.0    20853.3     53.62      2.91     1.18    mul                        vectorized_elementwise_kernel<4>
+  345    20871.6    20885.3      1.20    112.83    29.09 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  346    20885.7    20999.3    105.66      3.55     1.18    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  347    20934.5    21004.0     56.84      2.62     1.15    add                        vectorized_elementwise_kernel<4>
+  348    21015.1    21030.2      0.96      4.13    23.55 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  349    21064.0    21076.9      0.99      1.98    42.62 *  pow                        vectorized_elementwise_kernel<4,1>
+  350    21107.6    21120.4      0.94      4.67    41.50 *  mean                       reduce_kernel<512,1>
+  351    21155.6    21168.8      0.81      2.02    43.68 *  add                        vectorized_elementwise_kernel<4>
+  352    21191.9    21203.9      0.90      2.21    33.15 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  353    21229.0    21241.4      1.00      2.72    35.26 *  mul                        elementwise_kernel<128,2>
+  354    21285.8    21298.9      0.80      1.95    54.81 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  355    21324.7    21336.6      0.88      2.21    35.74 *  mul                        vectorized_elementwise_kernel<4>
+  356    21431.3    21446.6      0.64     20.06   107.74 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  357    21539.3    21554.0      0.88      8.10    87.39 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  358    21641.9    21656.1      0.73      7.81    94.02 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  359    21722.6    21736.6      0.38      3.97    72.67 *  mul                        elementwise_kernel<128,4>
+  360    21795.5    21808.8      0.79      3.74    68.16 *  neg                        elementwise_kernel<128,4>
+  361    21840.0    21853.5      0.97      5.31    40.96 *  cat                        CatArrayBatchedCopy<4,64,64>
+  362    21881.7    21893.9      0.76      3.42    35.17 *  mul                        elementwise_kernel<128,4>
+  363    21919.1    21931.0      0.83      2.05    33.63 *  add                        vectorized_elementwise_kernel<4>
+  364    21956.0    21967.8      1.01      2.69    34.75 *  mul                        elementwise_kernel<128,4>
+  365    22020.4    22034.0      1.09      2.34    63.49 *  neg                        elementwise_kernel<128,4>
+  366    22062.3    22075.1      0.98      3.46    38.85 *  cat                        CatArrayBatchedCopy<4,64,64>
+  367    22101.4    22113.4      0.85      2.66    34.78 *  mul                        elementwise_kernel<128,4>
+  368    22136.7    22148.6      0.86      2.05    32.51 *  add                        vectorized_elementwise_kernel<4>
+  369    22186.4    22200.1      0.97      3.97    49.50 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  370    22229.3    22241.9      1.16      3.68    37.86 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  371    22442.6    22457.0      0.45     15.14   211.42 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  372    22458.9    22473.3      7.25      6.27     1.09    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  373    22593.3    22608.8      0.67     21.66   129.31 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  374    22653.5    22666.9      0.67      2.34    36.35 *  add                        vectorized_elementwise_kernel<4>
+  375    22720.7    22735.2      0.76      4.19    66.02 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  376    22769.1    22781.8      0.92      2.05    42.40 *  pow                        vectorized_elementwise_kernel<4,1>
+  377    22812.3    22825.2      1.03      4.99    41.41 *  mean                       reduce_kernel<512,1>
+  378    22860.8    22873.6      0.68      2.08    43.33 *  add                        vectorized_elementwise_kernel<4>
+  379    22896.7    22908.5      0.78      2.27    32.90 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  380    22934.0    22946.3      0.87      2.82    35.45 *  mul                        elementwise_kernel<128,2>
+  381    22990.3    23003.8      0.90      2.02    54.69 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  382    23029.7    23041.9      0.77      2.30    36.06 *  mul                        vectorized_elementwise_kernel<4>
+  383    23118.9    23133.7      0.61     98.14    89.50 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  384    23176.8    23232.8     42.94      3.55     1.02    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  385    23256.7    23271.3      0.87     99.10    34.88 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  386    23305.8    23371.5     53.04      2.88     1.12    mul                        vectorized_elementwise_kernel<4>
+  387    23390.2    23403.6      1.12    112.38    29.25 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  388    23404.1    23517.2    105.33      3.52     1.22    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  389    23453.0    23521.9     56.43      2.59     1.22    add                        vectorized_elementwise_kernel<4>
+  390    23532.9    23548.0      0.95      4.10    23.42 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  391    23582.0    23594.5      0.84      2.02    42.50 *  pow                        vectorized_elementwise_kernel<4,1>
+  392    23625.0    23637.9      0.90      4.67    41.38 *  mean                       reduce_kernel<512,1>
+  393    23672.9    23686.1      0.86      2.02    43.52 *  add                        vectorized_elementwise_kernel<4>
+  394    23709.2    23721.1      0.82      2.21    32.99 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  395    23746.1    23758.0      0.76      2.69    34.66 *  mul                        elementwise_kernel<128,2>
+  396    23802.1    23815.2      0.75      1.98    54.56 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  397    23841.4    23853.7      1.02      2.18    36.48 *  mul                        vectorized_elementwise_kernel<4>
+  398    23940.4    23955.4      0.54     19.90    99.49 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  399    24046.9    24061.7      0.85      8.22    86.43 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  400    24148.9    24163.0      0.60      7.94    93.02 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  401    24228.7    24242.8      0.59      3.97    71.94 *  mul                        elementwise_kernel<128,4>
+  402    24301.0    24314.1      0.72      3.78    67.33 *  neg                        elementwise_kernel<128,4>
+  403    24344.9    24358.3      1.00      5.28    40.38 *  cat                        CatArrayBatchedCopy<4,64,64>
+  404    24386.3    24398.5      0.82      3.46    34.91 *  mul                        elementwise_kernel<128,4>
+  405    24423.7    24435.9      0.95      2.08    34.01 *  add                        vectorized_elementwise_kernel<4>
+  406    24461.0    24472.8      0.71      2.69    34.78 *  mul                        elementwise_kernel<128,4>
+  407    24525.5    24538.5      0.82      2.34    63.04 *  neg                        elementwise_kernel<128,4>
+  408    24566.9    24579.6      0.99      3.42    38.72 *  cat                        CatArrayBatchedCopy<4,64,64>
+  409    24605.7    24617.8      1.01      2.72    34.75 *  mul                        elementwise_kernel<128,4>
+  410    24641.1    24652.6      0.44      2.05    32.10 *  add                        vectorized_elementwise_kernel<4>
+  411    24690.2    24703.8      0.96      3.97    49.18 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  412    24733.5    24746.0      1.03      3.81    38.27 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  413    24888.6    24902.8      0.39     15.13   152.96 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  414    24904.7    24919.0      6.92      6.30     1.09    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  415    25039.5    25054.8      0.57     21.54   129.47 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  416    25099.5    25113.2      0.77      2.50    36.83 *  add                        vectorized_elementwise_kernel<4>
+  417    25166.9    25181.2      0.79      4.38    65.53 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  418    25215.0    25227.7      0.79      1.98    42.14 *  pow                        vectorized_elementwise_kernel<4,1>
+  419    25258.7    25271.6      0.73      4.89    41.86 *  mean                       reduce_kernel<512,1>
+  420    25307.3    25320.4      0.83      2.08    43.97 *  add                        vectorized_elementwise_kernel<4>
+  421    25343.5    25355.4      0.96      2.27    32.93 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  422    25380.7    25412.1      0.30      2.85    54.37 *  mul                        elementwise_kernel<128,2>
+  423    25461.2    25474.7      0.56      2.02    59.81 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  424    25503.2    25516.1      0.91      2.27    39.39 *  mul                        vectorized_elementwise_kernel<4>
+  425    25597.7    25613.0      0.53     97.50    94.56 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  426    25657.9    25711.7     40.11      3.52     1.22    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  427    25750.8    25765.6      0.87     97.79    50.33 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  428    25800.3    25864.4     51.33      2.98     1.09    mul                        vectorized_elementwise_kernel<4>
+  429    25884.9    25898.6      1.28    112.54    31.20 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  430    25898.9    26012.3    105.74      3.55     1.12    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  431    25947.2    26017.0     57.11      2.62     1.15    add                        vectorized_elementwise_kernel<4>
+  432    26028.9    26044.0      1.05      4.06    24.45 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  433    26077.9    26090.9      1.07      2.02    42.75 *  pow                        vectorized_elementwise_kernel<4,1>
+  434    26121.4    26134.4      0.93      4.64    41.57 *  mean                       reduce_kernel<512,1>
+  435    26169.4    26182.4      0.74      2.08    43.30 *  add                        vectorized_elementwise_kernel<4>
+  436    26205.7    26217.5      0.88      2.21    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  437    26242.6    26254.9      1.14      2.69    35.17 *  mul                        elementwise_kernel<128,2>
+  438    26298.5    26311.6      0.69      1.95    54.01 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  439    26337.5    26349.5      0.73      2.21    35.94 *  mul                        vectorized_elementwise_kernel<4>
+  440    26436.7    26452.1      0.95     20.16   100.35 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  441    26544.7    26559.5      0.85      8.16    87.26 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  442    26646.4    26660.6      0.74      7.87    92.96 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  443    26726.5    26740.4      0.27      3.94    71.90 *  mul                        elementwise_kernel<128,4>
+  444    26798.3    26811.9      0.81      3.84    67.58 *  neg                        elementwise_kernel<128,4>
+  445    26843.0    26856.4      0.96      5.34    40.67 *  cat                        CatArrayBatchedCopy<4,64,64>
+  446    26884.2    26896.8      1.02      3.46    35.01 *  mul                        elementwise_kernel<128,4>
+  447    26921.5    26933.4      0.71      2.08    33.15 *  add                        vectorized_elementwise_kernel<4>
+  448    26958.6    26970.4      0.91      2.72    34.91 *  mul                        elementwise_kernel<128,4>
+  449    27022.3    27035.7      1.10      2.30    62.62 *  neg                        elementwise_kernel<128,4>
+  450    27064.2    27077.1      0.86      3.58    39.07 *  cat                        CatArrayBatchedCopy<4,64,64>
+  451    27103.5    27115.7      0.94      2.69    35.04 *  mul                        elementwise_kernel<128,4>
+  452    27139.2    27150.9      0.87      2.08    32.54 *  add                        vectorized_elementwise_kernel<4>
+  453    27188.3    27202.2      0.91      3.97    49.22 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  454    27231.7    27244.2      1.04      3.68    38.05 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  455    27386.1    27400.1      0.50     15.10   152.19 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  456    27401.9    27416.4      7.63      6.24     1.15    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  457    27536.1    27551.7      0.67     21.41   129.09 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  458    27595.9    27609.4      0.89      2.30    36.32 *  add                        vectorized_elementwise_kernel<4>
+  459    27662.3    27676.8      0.62      4.38    65.09 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  460    27711.2    27723.9      0.86      1.98    42.69 *  pow                        vectorized_elementwise_kernel<4,1>
+  461    27755.1    27768.2      0.92      4.96    42.30 *  mean                       reduce_kernel<512,1>
+  462    27803.5    27816.4      0.64      1.92    43.26 *  add                        vectorized_elementwise_kernel<4>
+  463    27839.6    27851.7      0.62      2.11    33.38 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  464    27876.8    27889.1      0.81      2.88    35.26 *  mul                        elementwise_kernel<128,2>
+  465    27933.3    27946.7      0.90      1.98    54.75 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  466    27972.4    27984.5      0.82      2.30    35.84 *  mul                        vectorized_elementwise_kernel<4>
+  467    28061.8    28076.5      0.54     97.53    89.63 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  468    28119.9    28175.0     41.93      3.62     1.06    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  469    28200.0    28214.6      0.98     98.75    35.97 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  470    28249.1    28314.5     52.79      2.88     1.09    mul                        vectorized_elementwise_kernel<4>
+  471    28333.5    28346.9      1.07    113.41    29.57 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  472    28347.5    28461.5    106.33      3.46     1.18    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  473    28396.4    28466.0     57.06      2.59     1.02    add                        vectorized_elementwise_kernel<4>
+  474    28477.3    28494.8      0.78      4.13    26.24 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  475    28530.2    28543.0      0.81      2.02    44.03 *  pow                        vectorized_elementwise_kernel<4,1>
+  476    28573.8    28586.6      0.82      4.64    41.57 *  mean                       reduce_kernel<512,1>
+  477    28621.7    28634.7      0.99      2.02    43.49 *  add                        vectorized_elementwise_kernel<4>
+  478    28657.2    28669.3      0.81      2.24    32.57 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  479    28693.7    28705.9      0.79      2.75    34.40 *  mul                        elementwise_kernel<128,2>
+  480    28749.2    28762.3      0.72      1.98    53.60 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  481    28788.2    28800.5      1.10      2.21    36.26 *  mul                        vectorized_elementwise_kernel<4>
+  482    28887.1    28902.0      0.62     20.00    99.33 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  483    28994.7    29009.7      0.86      8.26    87.65 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  484    29097.7    29112.2      0.59      7.84    94.27 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  485    29178.5    29192.7      0.78      3.94    72.67 *  mul                        elementwise_kernel<128,4>
+  486    29250.4    29263.6      0.80      3.74    66.98 *  neg                        elementwise_kernel<128,4>
+  487    29294.3    29307.4      0.89      5.38    40.06 *  cat                        CatArrayBatchedCopy<4,64,64>
+  488    29335.4    29347.7      0.87      3.42    34.85 *  mul                        elementwise_kernel<128,4>
+  489    29372.4    29384.4     -6.72      2.05    33.28 *  add                        vectorized_elementwise_kernel<4>
+  490    29420.9    29433.8      0.76      2.66    47.42 *  mul                        elementwise_kernel<128,4>
+  491    29486.9    29500.1      0.78      2.34    63.58 *  neg                        elementwise_kernel<128,4>
+  492    29528.7    29541.8      0.84      3.49    39.42 *  cat                        CatArrayBatchedCopy<4,64,64>
+  493    29568.2    29580.4      1.12      2.69    35.10 *  mul                        elementwise_kernel<128,4>
+  494    29603.5    29615.2      0.81      2.02    32.03 *  add                        vectorized_elementwise_kernel<4>
+  495    29652.2    29666.0      0.87      4.03    48.86 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  496    29695.0    29707.7      0.96      3.71    37.66 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  497    29855.2    29869.7      0.78     15.07   158.24 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  498    29871.2    29885.8      7.43      6.27     1.09    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  499    30066.8    30082.4      0.47     21.47   190.27 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  500    30127.4    30141.0      0.98      2.30    37.18 *  add                        vectorized_elementwise_kernel<4>
+  501    30194.2    30209.2      0.76      4.22    65.86 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  502    30243.3    30256.2      0.68      1.98    42.78 *  pow                        vectorized_elementwise_kernel<4,1>
+  503    30287.7    30300.5      0.85      4.86    42.37 *  mean                       reduce_kernel<512,1>
+  504    30336.2    30349.3      0.71      2.08    43.90 *  add                        vectorized_elementwise_kernel<4>
+  505    30372.8    30384.9      0.74      2.30    33.50 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  506    30410.1    30422.5      0.99      2.66    35.33 *  mul                        elementwise_kernel<128,2>
+  507    30466.8    30479.9      0.79      1.98    54.72 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  508    30506.1    30518.2      0.96      2.30    36.35 *  mul                        vectorized_elementwise_kernel<4>
+  509    30595.3    30610.1      0.38     97.02    89.60 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  510    30653.5    30708.3     41.44      3.62     1.09    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  511    30733.1    30747.8      1.01     97.57    35.90 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  512    30782.0    30846.5     52.18      2.85     1.18    mul                        vectorized_elementwise_kernel<4>
+  513    30866.9    30880.4      1.16    114.56    31.04 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  514    30880.9    30996.1    107.57      3.52     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  515    30929.4    31000.8     58.38      2.62     1.18    add                        vectorized_elementwise_kernel<4>
+  516    31010.1    31025.5      1.19      4.13    22.08 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  517    31059.0    31071.8      0.89      2.02    42.24 *  pow                        vectorized_elementwise_kernel<4,1>
+  518    31102.5    31115.1      0.82      4.70    41.28 *  mean                       reduce_kernel<512,1>
+  519    31150.5    31163.5      0.91      2.05    43.65 *  add                        vectorized_elementwise_kernel<4>
+  520    31186.2    31198.1      0.81      2.24    32.61 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  521    31223.4    31235.6      1.07      2.75    35.26 *  mul                        elementwise_kernel<128,2>
+  522    31279.2    31292.3      0.68      1.98    53.95 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  523    31318.4    31330.5      0.73      2.18    36.19 *  mul                        vectorized_elementwise_kernel<4>
+  524    31418.3    31433.4      0.65     20.26   100.73 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  525    31525.8    31540.7      1.05      8.16    86.97 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  526    31628.4    31642.5      0.78      7.81    93.70 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  527    31708.3    31722.5      0.60      3.97    72.16 *  mul                        elementwise_kernel<128,4>
+  528    31780.5    31794.1      0.79      3.71    67.61 *  neg                        elementwise_kernel<128,4>
+  529    31825.0    31838.5      1.04      5.28    40.74 *  cat                        CatArrayBatchedCopy<4,64,64>
+  530    31866.5    31879.0      0.91      3.52    35.20 *  mul                        elementwise_kernel<128,4>
+  531    31903.6    31915.4      0.80      2.08    32.90 *  add                        vectorized_elementwise_kernel<4>
+  532    31940.4    31952.3      1.00      2.69    34.85 *  mul                        elementwise_kernel<128,4>
+  533    32004.5    32017.8      0.86      2.30    62.78 *  neg                        elementwise_kernel<128,4>
+  534    32046.4    32059.2      1.08      3.39    39.14 *  cat                        CatArrayBatchedCopy<4,64,64>
+  535    32085.1    32097.6      0.85      2.72    34.94 *  mul                        elementwise_kernel<128,4>
+  536    32120.9    32132.6      0.84      2.08    32.29 *  add                        vectorized_elementwise_kernel<4>
+  537    32169.9    32183.2      0.88      4.00    48.51 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  538    32212.7    32225.2      1.08      3.62    38.05 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  539    32367.8    32381.9      0.54     15.07   153.02 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  540    32383.7    32398.0      7.07      6.27     1.06    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  541    32517.4    32532.9      0.47     21.18   128.67 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  542    32577.5    32591.5      0.82      2.30    37.41 *  add                        vectorized_elementwise_kernel<4>
+  543    32644.2    32658.6      0.66      4.26    64.74 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  544    32692.9    32705.3      0.75      2.05    42.46 *  pow                        vectorized_elementwise_kernel<4,1>
+  545    32736.1    32749.3      0.97      4.86    41.95 *  mean                       reduce_kernel<512,1>
+  546    32784.9    32797.9      0.69      2.05    43.77 *  add                        vectorized_elementwise_kernel<4>
+  547    32821.2    32833.2      0.68      2.08    33.25 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  548    32858.8    32871.2      0.77      2.66    35.93 *  mul                        elementwise_kernel<128,2>
+  549    32915.3    32929.0      0.80      1.98    55.10 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  550    32955.2    32967.4      0.88      2.30    36.48 *  mul                        vectorized_elementwise_kernel<4>
+  551    33044.2    33058.7      0.64     97.89    88.99 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  552    33101.7    33157.7     43.01      3.55     1.06    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  553    33182.2    33196.6      1.02     97.53    35.39 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  554    33231.3    33295.3     51.27      2.88     1.09    mul                        vectorized_elementwise_kernel<4>
+  555    33316.8    33330.4      1.24    113.57    32.26 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  556    33330.8    33445.2    106.74      3.49     1.25    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  557    33379.5    33449.9     37.84      2.62     1.21    add                        vectorized_elementwise_kernel<4>
+  558    33484.9    33500.3      0.87      4.16    47.78 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  559    33536.2    33549.3      0.58      1.98    44.80 *  pow                        vectorized_elementwise_kernel<4,1>
+  560    33581.9    33595.2      0.81      4.67    43.90 *  mean                       reduce_kernel<512,1>
+  561    33631.9    33645.5      0.77      2.02    45.66 *  add                        vectorized_elementwise_kernel<4>
+  562    33669.8    33682.2      0.79      2.27    34.69 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  563    33718.8    33731.0      0.79      2.75    46.56 *  mul                        elementwise_kernel<128,2>
+  564    33774.9    33788.1      0.75      1.98    54.30 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  565    33814.1    33826.2      1.01      2.14    36.19 *  mul                        vectorized_elementwise_kernel<4>
+  566    33913.1    33928.1      0.59     20.16    99.68 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  567    34020.2    34035.2      1.01      8.06    86.98 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  568    34122.0    34136.1      0.48      7.84    92.80 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  569    34202.7    34216.9      0.68      3.94    72.99 *  mul                        elementwise_kernel<128,4>
+  570    34275.0    34288.2      0.69      3.78    67.36 *  neg                        elementwise_kernel<128,4>
+  571    34319.3    34332.7      0.70      5.31    40.74 *  cat                        CatArrayBatchedCopy<4,64,64>
+  572    34361.2    34373.5      0.81      3.46    35.46 *  mul                        elementwise_kernel<128,4>
+  573    34398.5    34410.7      1.02      2.08    33.79 *  add                        vectorized_elementwise_kernel<4>
+  574    34435.9    34447.6      0.90      2.69    34.78 *  mul                        elementwise_kernel<128,4>
+  575    34499.5    34512.8      0.89      2.34    62.56 *  neg                        elementwise_kernel<128,4>
+  576    34541.7    34554.7      0.86      3.49    39.49 *  cat                        CatArrayBatchedCopy<4,64,64>
+  577    34581.2    34593.5      1.11      2.66    35.33 *  mul                        elementwise_kernel<128,4>
+  578    34616.9    34628.6      0.51      2.02    32.48 *  add                        vectorized_elementwise_kernel<4>
+  579    34666.5    34680.0      0.94      3.97    49.38 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  580    34709.1    34721.5      0.99      3.68    37.57 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  581    34864.2    34878.4      0.57     15.14   153.15 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  582    34880.0    34894.6      7.11      6.27     1.09    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  583    35014.7    35029.9      0.50     21.70   129.09 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  584    35074.6    35088.1      0.79      2.46    36.48 *  add                        vectorized_elementwise_kernel<4>
+  585    35141.8    35156.3      0.79      4.22    65.69 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  586    35190.0    35202.8      0.79      2.02    42.30 *  pow                        vectorized_elementwise_kernel<4,1>
+  587    35233.7    35246.8      0.80      4.90    41.95 *  mean                       reduce_kernel<512,1>
+  588    35282.5    35295.6      0.74      2.05    43.97 *  add                        vectorized_elementwise_kernel<4>
+  589    35318.8    35330.9      1.07      2.27    33.25 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  590    35355.9    35368.2      0.75      2.85    35.04 *  mul                        elementwise_kernel<128,2>
+  591    35412.4    35425.6      0.78      1.98    54.49 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  592    35451.6    35463.8      1.00      2.33    36.19 *  mul                        vectorized_elementwise_kernel<4>
+  593    35540.6    35555.1      0.70     97.47    89.02 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  594    35598.1    35653.8     42.14      3.58     1.22    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  595    35678.2    35692.9      0.94     97.73    35.49 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  596    35727.0    35791.9     52.22      2.85     1.28    mul                        vectorized_elementwise_kernel<4>
+  597    35811.4    35824.9      1.21    112.67    30.14 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  598    35825.3    35938.6    105.73      3.55     1.02    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  599    35873.7    35943.3     57.13      2.59     1.15    add                        vectorized_elementwise_kernel<4>
+  600    35954.4    35969.3      1.01      4.10    23.42 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  601    36003.2    36016.3      1.03      1.98    42.88 *  pow                        vectorized_elementwise_kernel<4,1>
+  602    36046.5    36059.5      0.87      4.67    41.22 *  mean                       reduce_kernel<512,1>
+  603    36094.8    36108.1      0.74      2.05    43.97 *  add                        vectorized_elementwise_kernel<4>
+  604    36131.4    36143.4      0.83      2.24    33.25 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  605    36168.8    36181.3      1.15      2.72    35.71 *  mul                        elementwise_kernel<128,2>
+  606    36225.1    36238.1      0.73      1.95    54.08 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  607    36264.2    36276.3      0.75      2.21    36.16 *  mul                        vectorized_elementwise_kernel<4>
+  608    36363.0    36378.0      0.59     19.97    99.58 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  609    36471.2    36486.0      0.95      8.26    88.03 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  610    36573.7    36587.8      0.74      7.90    93.50 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  611    36653.6    36667.5      0.44      3.94    71.74 *  mul                        elementwise_kernel<128,4>
+  612    36725.2    36738.7      0.86      3.71    67.36 *  neg                        elementwise_kernel<128,4>
+  613    36769.8    36783.3      1.01      5.31    40.86 *  cat                        CatArrayBatchedCopy<4,64,64>
+  614    36811.4    36823.6      0.81      3.46    34.98 *  mul                        elementwise_kernel<128,4>
+  615    36848.4    36860.4      0.68      2.05    33.38 *  add                        vectorized_elementwise_kernel<4>
+  616    36886.7    36898.7      1.06      2.65    36.26 *  mul                        elementwise_kernel<128,4>
+  617    36950.8    36964.0      0.94      2.30    62.62 *  neg                        elementwise_kernel<128,4>
+  618    36992.5    37005.4      0.93      3.49    39.10 *  cat                        CatArrayBatchedCopy<4,64,64>
+  619    37032.1    37044.3      0.80      2.69    35.39 *  mul                        elementwise_kernel<128,4>
+  620    37068.3    37080.1      0.91      2.05    33.09 *  add                        vectorized_elementwise_kernel<4>
+  621    37117.2    37131.0      1.05      3.97    48.90 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  622    37160.9    37173.4      0.94      3.65    38.37 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  623    37315.8    37330.1      0.32     15.04   153.05 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  624    37332.1    37346.3      7.07      6.24     1.15    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  625    37478.6    37494.4      0.60     21.79   141.89 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  626    37539.4    37553.1      0.63      2.34    36.90 *  add                        vectorized_elementwise_kernel<4>
+  627    37606.5    37621.0      0.64      4.22    65.57 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  628    37655.3    37667.7      0.83      2.02    42.53 *  pow                        vectorized_elementwise_kernel<4,1>
+  629    37698.7    37712.1      0.90      4.96    42.33 *  mean                       reduce_kernel<512,1>
+  630    37748.2    37761.1      0.74      1.92    44.10 *  add                        vectorized_elementwise_kernel<4>
+  631    37784.3    37796.2      0.89      2.21    33.18 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  632    37821.1    37833.7      0.85      2.94    35.23 *  mul                        elementwise_kernel<128,2>
+  633    37877.4    37890.7      0.87      2.02    54.05 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  634    37916.7    37929.1      0.94      2.27    36.38 *  mul                        vectorized_elementwise_kernel<4>
+  635    38069.2    38084.2      0.35     99.90   152.89 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  636    38128.2    38185.4     43.64      3.55     1.28    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  637    38208.8    38223.6      1.02     99.39    34.62 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  638    38258.4    38324.2     53.32      2.88     1.25    mul                        vectorized_elementwise_kernel<4>
+  639    38342.7    38356.2      1.25    112.80    29.12 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  640    38356.5    38470.1    105.82      3.62     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  641    38405.6    38474.9     56.60      2.62     1.15    add                        vectorized_elementwise_kernel<4>
+  642    38487.2    38502.2      0.93      4.10    24.67 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  643    38536.6    38549.3      0.87      1.98    43.07 *  pow                        vectorized_elementwise_kernel<4,1>
+  644    38580.4    38593.3      0.57      4.74    42.02 *  mean                       reduce_kernel<512,1>
+  645    38629.1    38642.2      0.93      2.08    44.10 *  add                        vectorized_elementwise_kernel<4>
+  646    38665.3    38677.3      0.82      2.21    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  647    38702.6    38714.8      0.81      2.69    35.26 *  mul                        elementwise_kernel<128,2>
+  648    38759.2    38772.5      0.70      1.98    54.98 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  649    38798.4    38810.7      1.01      2.21    36.26 *  mul                        vectorized_elementwise_kernel<4>
+  650    38897.3    38912.3      0.57     20.13    99.36 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  651    39004.2    39019.2      0.98      8.35    86.75 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  652    39106.3    39120.6      0.60      7.87    93.05 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  653    39186.7    39200.7      0.69      3.97    72.26 *  mul                        elementwise_kernel<128,4>
+  654    39257.8    39271.2      0.82      3.74    66.56 *  neg                        elementwise_kernel<128,4>
+  655    39301.9    39315.5      0.88      5.28    40.51 *  cat                        CatArrayBatchedCopy<4,64,64>
+  656    39343.7    39355.9      0.75      3.46    35.10 *  mul                        elementwise_kernel<128,4>
+  657    39380.6    39392.6      1.02      2.11    33.31 *  add                        vectorized_elementwise_kernel<4>
+  658    39417.4    39429.2      0.83      2.66    34.50 *  mul                        elementwise_kernel<128,4>
+  659    39481.0    39493.9      0.78      2.34    62.05 *  neg                        elementwise_kernel<128,4>
+  660    39522.6    39535.2      0.96      3.49    38.94 *  cat                        CatArrayBatchedCopy<4,64,64>
+  661    39561.6    39573.9      1.13      2.66    35.17 *  mul                        elementwise_kernel<128,4>
+  662    39597.0    39608.6      0.73      2.05    32.03 *  add                        vectorized_elementwise_kernel<4>
+  663    39646.2    39659.8      0.89      4.00    49.22 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  664    39689.6    39702.2      0.96      3.81    38.40 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  665    39844.1    39858.4      0.60     15.10   152.41 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  666    39860.2    39874.7      7.23      6.27     1.18    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  667    39995.2    40010.6      0.46     21.86   129.57 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  668    40055.3    40068.8      0.74      2.50    36.38 *  add                        vectorized_elementwise_kernel<4>
+  669    40122.2    40136.7      0.86      4.22    65.44 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  670    40170.9    40183.6      0.76      2.02    42.66 *  pow                        vectorized_elementwise_kernel<4,1>
+  671    40214.4    40227.3      0.83      4.90    41.63 *  mean                       reduce_kernel<512,1>
+  672    40263.4    40276.2      0.74      2.18    44.03 *  add                        vectorized_elementwise_kernel<4>
+  673    40299.3    40311.5      1.10      2.24    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  674    40336.5    40348.7      0.80      2.88    35.04 *  mul                        elementwise_kernel<128,2>
+  675    40392.9    40406.0      0.69      1.98    54.40 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  676    40432.2    40444.5      1.16      2.30    36.54 *  mul                        vectorized_elementwise_kernel<4>
+  677    40521.2    40536.0      0.63     97.60    89.12 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  678    40579.4    40634.7     42.16      3.55     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  679    40658.8    40673.4      1.07     98.08    35.10 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  680    40707.4    40772.5     52.89      2.94     1.09    mul                        vectorized_elementwise_kernel<4>
+  681    40791.3    40804.9      1.28    114.11    29.38 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  682    40805.5    40920.2    107.13      3.46     1.22    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  683    40854.1    40924.9     58.07      2.59     1.28    add                        vectorized_elementwise_kernel<4>
+  684    40935.7    40950.7      1.00      4.00    23.17 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  685    40985.0    40997.8      1.03      1.98    43.10 *  pow                        vectorized_elementwise_kernel<4,1>
+  686    41028.4    41041.4      0.77      4.70    41.66 *  mean                       reduce_kernel<512,1>
+  687    41077.1    41090.1      0.81      2.05    44.00 *  add                        vectorized_elementwise_kernel<4>
+  688    41113.1    41125.1      0.73      2.24    32.96 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  689    41150.9    41163.1      1.12      2.69    35.71 *  mul                        elementwise_kernel<128,2>
+  690    41206.8    41220.0      0.69      1.95    54.18 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  691    41246.2    41258.1      0.89      2.24    36.22 *  mul                        vectorized_elementwise_kernel<4>
+  692    41345.1    41359.9      0.44     20.16    99.58 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  693    41462.5    41477.6      0.72      8.13    97.50 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  694    41565.7    41580.0      0.64      7.97    94.27 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  695    41646.3    41660.3      0.46      3.97    72.32 *  mul                        elementwise_kernel<128,4>
+  696    41718.6    41731.9      0.85      3.71    67.61 *  neg                        elementwise_kernel<128,4>
+  697    41762.6    41776.2      0.97      5.31    40.64 *  cat                        CatArrayBatchedCopy<4,64,64>
+  698    41804.6    41817.2      0.85      3.42    35.65 *  mul                        elementwise_kernel<128,4>
+  699    41842.7    41854.9      0.76      2.05    34.27 *  add                        vectorized_elementwise_kernel<4>
+  700    41880.6    41892.6      0.88      2.72    35.65 *  mul                        elementwise_kernel<128,4>
+  701    41945.3    41958.5      0.91      2.30    63.17 *  neg                        elementwise_kernel<128,4>
+  702    41987.0    42000.1      1.09      3.42    39.30 *  cat                        CatArrayBatchedCopy<4,64,64>
+  703    42026.4    42043.8      0.59      2.72    40.32 *  mul                        elementwise_kernel<128,4>
+  704    42070.0    42082.3      0.91      2.05    35.78 *  add                        vectorized_elementwise_kernel<4>
+  705    42120.0    42133.7      0.83      4.00    49.34 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  706    42163.6    42176.3      1.03      3.71    38.59 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  707    42316.7    42331.0      0.44     15.07   151.01 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  708    42332.9    42347.3      7.22      6.27     1.22    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  709    42467.5    42482.9      0.63     21.15   129.31 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  710    42527.3    42541.1      0.78      2.50    37.09 *  add                        vectorized_elementwise_kernel<4>
+  711    42594.3    42608.8      0.65      4.45    65.15 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  712    42642.8    42655.4      0.82      2.02    42.24 *  pow                        vectorized_elementwise_kernel<4,1>
+  713    42686.3    42699.4      1.05      4.83    41.98 *  mean                       reduce_kernel<512,1>
+  714    42734.8    42747.7      0.67      1.92    43.42 *  add                        vectorized_elementwise_kernel<4>
+  715    42770.7    42782.7      0.95      2.27    33.06 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  716    42807.9    42820.2      0.87      2.88    35.26 *  mul                        elementwise_kernel<128,2>
+  717    42864.2    42877.7      0.56      1.98    54.66 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  718    42904.1    42916.2      0.87      2.34    36.48 *  mul                        vectorized_elementwise_kernel<4>
+  719    42993.2    43007.8      0.59     98.53    89.25 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  720    43050.9    43107.4     43.31      3.62     1.12    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  721    43131.2    43145.7      0.96     97.50    34.69 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  722    43180.5    43244.5     51.40      2.88     1.25    mul                        vectorized_elementwise_kernel<4>
+  723    43265.2    43278.8      1.09    112.57    31.42 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  724    43279.3    43392.6    105.67      3.46     1.25    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  725    43328.5    43397.5     56.33      2.56     1.38    add                        vectorized_elementwise_kernel<4>
+  726    43408.9    43424.2      1.19      4.10    24.19 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  727    43458.1    43470.9      0.90      2.02    42.62 *  pow                        vectorized_elementwise_kernel<4,1>
+  728    43501.5    43514.7      0.86      4.64    41.73 *  mean                       reduce_kernel<512,1>
+  729    43549.8    43562.9      0.86      2.08    43.62 *  add                        vectorized_elementwise_kernel<4>
+  730    43585.9    43597.9      0.84      2.24    32.86 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  731    43622.7    43634.8      0.87      2.72    34.69 *  mul                        elementwise_kernel<128,2>
+  732    43678.7    43692.0      0.76      1.98    54.46 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  733    43717.7    43730.0      1.03      2.21    36.00 *  mul                        vectorized_elementwise_kernel<4>
+  734    43830.8    43846.1      0.49     20.54   113.98 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  735    43943.0    43958.4      0.82      7.94    91.68 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  736    44049.3    44063.8      0.44      7.90    97.53 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  737    44132.7    44147.1      0.46      3.97    75.39 *  mul                        elementwise_kernel<128,4>
+  738    44207.3    44221.2      0.55      3.78    70.05 *  neg                        elementwise_kernel<128,4>
+  739    44253.3    44266.9      0.87      5.31    41.98 *  cat                        CatArrayBatchedCopy<4,64,64>
+  740    44295.8    44308.6      0.75      3.42    36.38 *  mul                        elementwise_kernel<128,4>
+  741    44334.6    44347.1      0.73      2.08    35.10 *  add                        vectorized_elementwise_kernel<4>
+  742    44373.1    44384.9      0.59      2.69    35.68 *  mul                        elementwise_kernel<128,4>
+  743    44439.8    44453.3      0.79      2.34    65.73 *  neg                        elementwise_kernel<128,4>
+  744    44483.1    44496.2      0.91      3.39    40.61 *  cat                        CatArrayBatchedCopy<4,64,64>
+  745    44523.6    44536.1      0.97      2.69    36.48 *  mul                        elementwise_kernel<128,4>
+  746    44560.5    44572.5      0.41      2.08    33.73 *  add                        vectorized_elementwise_kernel<4>
+  747    44622.5    44636.5      0.86      3.94    61.85 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  748    44666.2    44679.0      0.96      3.65    38.56 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  749    44820.2    44834.4      0.67     15.07   151.81 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  750    44836.0    44850.6      7.18      6.24     1.12    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  751    44971.4    44986.5      0.43     21.44   129.63 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  752    45031.2    45045.2      1.14      2.59    37.28 *  add                        vectorized_elementwise_kernel<4>
+  753    45098.4    45112.9      0.77      4.42    65.09 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  754    45146.9    45159.8      0.58      2.05    42.46 *  pow                        vectorized_elementwise_kernel<4,1>
+  755    45190.8    45203.7      0.76      4.90    41.85 *  mean                       reduce_kernel<512,1>
+  756    45240.0    45252.9      0.60      2.08    44.32 *  add                        vectorized_elementwise_kernel<4>
+  757    45276.3    45288.3      0.92      2.37    33.34 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  758    45313.6    45326.1      0.82      2.85    35.39 *  mul                        elementwise_kernel<128,2>
+  759    45370.0    45383.3     -5.99      1.98    54.40 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  760    45443.5    45457.3      0.89      2.30    72.00 *  mul                        vectorized_elementwise_kernel<4>
+  761    45540.8    45556.2      0.62     97.57    96.58 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  762    45601.7    45654.9     39.12      3.58     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  763    45697.4    45712.6    -10.50     99.10    54.18 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  764    45759.0    45812.9     41.44      2.91     1.18    mul                        vectorized_elementwise_kernel<4>
+  765    45911.1    45925.0      1.07    113.41   109.15 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  766    45925.8    46039.5    105.93      3.55     1.12    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  767    45975.5    46044.2     56.03      2.62     1.15    add                        vectorized_elementwise_kernel<4>
+  768    46057.3    46072.6      1.05      4.06    25.73 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  769    46106.8    46119.6      0.97      1.98    42.94 *  pow                        vectorized_elementwise_kernel<4,1>
+  770    46150.4    46163.2      0.83      4.67    41.66 *  mean                       reduce_kernel<512,1>
+  771    46199.0    46212.0      0.71      2.05    44.09 *  add                        vectorized_elementwise_kernel<4>
+  772    46235.3    46247.3      0.58      2.21    33.25 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  773    46272.9    46285.2      1.04      2.75    35.71 *  mul                        elementwise_kernel<128,2>
+  774    46329.3    46342.3      0.66      1.98    54.30 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  775    46368.7    46392.2      0.93      2.14    47.90 *  mul                        vectorized_elementwise_kernel<4>
+  776    46483.5    46498.7      0.47     20.26   104.38 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  777    46595.8    46611.1      0.73      8.22    92.16 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  778    46702.2    46728.1      0.53      7.94   108.77 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  779    46793.7    46807.6      0.40      3.97    71.55 *  mul                        elementwise_kernel<128,4>
+  780    46865.5    46878.9      0.92      3.78    67.39 *  neg                        elementwise_kernel<128,4>
+  781    46909.7    46923.1      1.04      5.31    40.38 *  cat                        CatArrayBatchedCopy<4,64,64>
+  782    46951.0    46963.1      0.88      3.42    34.69 *  mul                        elementwise_kernel<128,4>
+  783    46987.9    46999.7      0.72      2.05    33.18 *  add                        vectorized_elementwise_kernel<4>
+  784    47024.8    47036.8      0.85      2.69    35.01 *  mul                        elementwise_kernel<128,4>
+  785    47089.1    47102.5      0.95      2.30    63.07 *  neg                        elementwise_kernel<128,4>
+  786    47131.2    47144.0      0.99      3.46    39.23 *  cat                        CatArrayBatchedCopy<4,64,64>
+  787    47169.8    47181.8      0.78      2.72    34.30 *  mul                        elementwise_kernel<128,4>
+  788    47205.5    47217.5      0.87      2.05    33.02 *  add                        vectorized_elementwise_kernel<4>
+  789    47255.0    47268.7      0.95      3.97    49.15 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  790    47297.8    47310.4      1.03      3.74    37.73 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  791    47452.5    47466.6      0.44     15.04   152.38 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  792    47468.5    47482.9      7.06      6.21     1.25    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  793    47603.6    47619.0      0.61     21.50   129.95 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  794    47663.6    47677.2      0.91      2.53    36.67 *  add                        vectorized_elementwise_kernel<4>
+  795    47730.0    47744.3      0.60      4.26    64.54 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  796    47778.9    47791.5      0.79      2.02    42.98 *  pow                        vectorized_elementwise_kernel<4,1>
+  797    47822.1    47835.4      1.04      4.96    41.92 *  mean                       reduce_kernel<512,1>
+  798    47871.2    47884.3      0.88      2.08    43.94 *  add                        vectorized_elementwise_kernel<4>
+  799    47907.0    47919.0      0.84      2.33    32.61 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  800    47944.4    47956.7      0.91      2.85    35.33 *  mul                        elementwise_kernel<128,2>
+  801    48000.7    48014.0      0.86      2.02    54.50 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  802    48040.1    48052.4      1.04      2.27    36.35 *  mul                        vectorized_elementwise_kernel<4>
+  803    48129.3    48143.8      0.49     98.24    89.12 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  804    48187.0    48243.3     43.06      3.55     1.25    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  805    48266.2    48280.8      0.99     98.27    34.02 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  806    48315.8    48380.2     51.78      2.98     1.15    mul                        vectorized_elementwise_kernel<4>
+  807    48400.1    48425.2      0.76    115.04    42.01 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  808    48426.2    48541.4    106.85      3.52     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  809    48477.1    48546.1     55.70      2.62     1.18    add                        vectorized_elementwise_kernel<4>
+  810    48561.2    48576.6      0.66      4.13    27.90 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  811    48612.2    48625.2      0.77      1.98    44.51 *  pow                        vectorized_elementwise_kernel<4,1>
+  812    48657.1    48670.2      0.73      4.74    43.01 *  mean                       reduce_kernel<512,1>
+  813    48707.1    48720.4      0.93      2.05    45.44 *  add                        vectorized_elementwise_kernel<4>
+  814    48744.2    48767.3      0.68      2.21    44.86 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  815    48792.2    48804.2      0.82      2.72    34.72 *  mul                        elementwise_kernel<128,2>
+  816    48848.1    48861.3      0.72      1.95    54.33 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  817    48887.1    48899.4      1.00      2.21    36.16 *  mul                        vectorized_elementwise_kernel<4>
+  818    48986.4    49001.4      0.54     20.32    99.74 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  819    49094.1    49109.3      0.89      8.13    87.61 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  820    49197.1    49211.2      0.49      7.78    93.82 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  821    49278.2    49292.6      0.70      3.94    73.57 *  mul                        elementwise_kernel<128,4>
+  822    49349.9    49363.3      0.75      3.74    66.78 *  neg                        elementwise_kernel<128,4>
+  823    49414.2    49428.7      0.66      5.31    61.66 *  cat                        CatArrayBatchedCopy<4,64,64>
+  824    49459.7    49472.5      0.77      3.46    38.43 *  mul                        elementwise_kernel<128,4>
+  825    49498.6    49511.0      0.88      2.08    35.07 *  add                        vectorized_elementwise_kernel<4>
+  826    49537.4    49549.4      0.77      2.69    36.35 *  mul                        elementwise_kernel<128,4>
+  827    49605.0    49618.6      0.73      2.34    66.46 *  neg                        elementwise_kernel<128,4>
+  828    49648.5    49661.6      0.86      3.49    40.74 *  cat                        CatArrayBatchedCopy<4,64,64>
+  829    49700.8    49713.0      1.08      2.66    47.87 *  mul                        elementwise_kernel<128,4>
+  830    49736.2    49747.8      0.77      2.08    32.16 *  add                        vectorized_elementwise_kernel<4>
+  831    49784.5    49798.5      0.89      4.00    48.64 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  832    49827.8    49840.4      0.87      3.65    37.82 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  833    49981.7    49996.1      0.70     15.10   152.09 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  834    49997.7    50012.2      7.17      6.30     1.02    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  835    50132.7    50148.2      0.37     21.66   129.63 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  836    50192.9    50206.7      1.09      2.56    36.93 *  add                        vectorized_elementwise_kernel<4>
+  837    50259.3    50274.2      0.77      4.19    64.86 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  838    50308.2    50321.1      0.85      1.98    42.78 *  pow                        vectorized_elementwise_kernel<4,1>
+  839    50351.9    50364.9      0.81      4.93    41.79 *  mean                       reduce_kernel<512,1>
+  840    50400.7    50413.7      0.76      2.05    43.84 *  add                        vectorized_elementwise_kernel<4>
+  841    50436.9    50448.9      1.01      2.24    33.18 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  842    50473.9    50486.0      0.76      2.88    34.88 *  mul                        elementwise_kernel<128,2>
+  843    50530.0    50543.2      0.66      2.02    54.24 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  844    50569.0    50581.2      0.98      2.30    36.03 *  mul                        vectorized_elementwise_kernel<4>
+  845    50657.8    50672.6      0.67     99.17    89.05 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  846    50715.6    50772.9     44.18      3.55     1.18    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  847    50795.1    50809.8      0.93     98.97    33.34 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  848    50844.6    50910.0     53.22      2.91     1.18    mul                        vectorized_elementwise_kernel<4>
+  849    50928.6    50942.2      1.06    112.41    29.31 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  850    50942.7    51055.9    105.69      3.49     1.25    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  851    50991.4    51060.6     56.49      2.56     1.22    add                        vectorized_elementwise_kernel<4>
+  852    51072.8    51088.1      0.80      4.03    25.02 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  853    51122.2    51135.0      0.98      1.98    42.85 *  pow                        vectorized_elementwise_kernel<4,1>
+  854    51165.6    51178.5      0.88      4.67    41.50 *  mean                       reduce_kernel<512,1>
+  855    51213.6    51226.5      0.69      2.05    43.36 *  add                        vectorized_elementwise_kernel<4>
+  856    51250.1    51262.2      0.80      2.21    33.60 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  857    51287.4    51299.6      1.08      2.72    35.17 *  mul                        elementwise_kernel<128,2>
+  858    51343.2    51356.3      0.74      1.95    53.98 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  859    51382.5    51394.3      0.92      2.18    36.09 *  mul                        vectorized_elementwise_kernel<4>
+  860    51480.8    51495.8      0.64     20.10    99.29 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  861    51587.8    51602.7      0.79      8.22    86.85 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  862    51689.9    51704.2      0.61      7.84    93.25 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  863    51770.1    51783.9      0.53      3.97    71.87 *  mul                        elementwise_kernel<128,4>
+  864    51842.0    51855.2      0.87      3.71    67.33 *  neg                        elementwise_kernel<128,4>
+  865    51886.1    51899.5      0.77      5.31    40.58 *  cat                        CatArrayBatchedCopy<4,64,64>
+  866    51927.2    51939.6      0.93      3.42    34.75 *  mul                        elementwise_kernel<128,4>
+  867    51964.4    51976.2      0.85      2.08    33.22 *  add                        vectorized_elementwise_kernel<4>
+  868    52000.9    52012.6      1.08      2.72    34.34 *  mul                        elementwise_kernel<128,4>
+  869    52064.7    52078.0      0.73      2.37    62.69 *  neg                        elementwise_kernel<128,4>
+  870    52106.9    52119.6      0.93      3.42    39.26 *  cat                        CatArrayBatchedCopy<4,64,64>
+  871    52145.9    52157.9      0.78      2.69    34.88 *  mul                        elementwise_kernel<128,4>
+  872    52181.4    52193.1      0.87      2.08    32.48 *  add                        vectorized_elementwise_kernel<4>
+  873    52230.0    52243.6      1.04      4.13    48.45 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  874    52273.2    52285.7      1.05      3.65    37.89 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  875    52421.4    52440.4      0.24     15.14   151.10 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  876    52442.8    52456.8      6.50      6.27     1.22    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  877    52578.9    52594.5      0.76     21.21   131.49 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  878    52638.9    52652.3      0.72      2.50    36.58 *  add                        vectorized_elementwise_kernel<4>
+  879    52705.5    52720.0      0.51      4.19    65.18 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  880    52754.2    52766.7      0.85      2.05    42.53 *  pow                        vectorized_elementwise_kernel<4,1>
+  881    52797.6    52810.8      0.96      5.09    42.01 *  mean                       reduce_kernel<512,1>
+  882    52846.2    52859.2      0.75      2.08    43.33 *  add                        vectorized_elementwise_kernel<4>
+  883    52882.4    52894.2      0.81      2.08    32.96 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  884    52919.9    52932.0      0.73      2.88    35.74 *  mul                        elementwise_kernel<128,2>
+  885    52976.7    52990.2      0.86      1.95    55.23 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  886    53016.2    53028.2      0.82      2.34    36.06 *  mul                        vectorized_elementwise_kernel<4>
+  887    53104.9    53119.7      0.45     97.44    89.18 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  888    53162.8    53218.3     42.43      3.55     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  889    53242.6    53257.1      1.03     98.56    35.23 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  890    53291.4    53356.9     52.88      2.88     1.25    mul                        vectorized_elementwise_kernel<4>
+  891    53375.6    53409.3      0.48    114.78    49.60 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  892    53411.0    53525.2    104.63      3.49     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  893    53466.5    53529.9     49.99      2.59     1.22    add                        vectorized_elementwise_kernel<4>
+  894    53554.2    53570.1      0.72      4.10    37.63 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  895    53606.9    53620.3      0.77      1.95    46.05 *  pow                        vectorized_elementwise_kernel<4,1>
+  896    53653.4    53667.1      0.75      4.67    44.86 *  mean                       reduce_kernel<512,1>
+  897    53726.1    53739.5      0.98      2.02    67.74 *  add                        vectorized_elementwise_kernel<4>
+  898    53762.7    53774.8      0.82      2.24    33.21 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  899    53800.7    53812.9      0.82      2.78    35.94 *  mul                        elementwise_kernel<128,2>
+  900    53857.0    53870.3      0.73      1.95    54.56 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  901    53896.7    53908.9      0.92      2.27    36.70 *  mul                        vectorized_elementwise_kernel<4>
+  902    54056.2    54071.8      0.79     20.06   160.60 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  903    54165.0    54180.0      0.90      8.10    88.09 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  904    54267.7    54282.1      0.60      7.81    94.05 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  905    54348.8    54363.1      0.62      4.00    73.18 *  mul                        elementwise_kernel<128,4>
+  906    54420.9    54434.5      0.67      3.78    67.36 *  neg                        elementwise_kernel<128,4>
+  907    54465.6    54479.0      1.18      5.28    40.74 *  cat                        CatArrayBatchedCopy<4,64,64>
+  908    54507.1    54519.5      0.79      3.42    35.26 *  mul                        elementwise_kernel<128,4>
+  909    54544.7    54557.0      0.93      2.08    34.05 *  add                        vectorized_elementwise_kernel<4>
+  910    54582.3    54594.0      0.89      2.72    34.91 *  mul                        elementwise_kernel<128,4>
+  911    54646.3    54659.4      0.85      2.33    62.75 *  neg                        elementwise_kernel<128,4>
+  912    54687.9    54700.8      0.93      3.46    39.01 *  cat                        CatArrayBatchedCopy<4,64,64>
+  913    54726.7    54738.9      1.03      2.66    34.65 *  mul                        elementwise_kernel<128,4>
+  914    54762.7    54774.5      0.76      2.08    32.99 *  add                        vectorized_elementwise_kernel<4>
+  915    54812.1    54825.6      0.89      3.97    48.93 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  916    54855.4    54868.1      0.94      3.68    38.62 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  917    55009.1    55023.3      0.71     15.07   151.49 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  918    55024.8    55039.5      7.39      6.30     1.12    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  919    55159.3    55174.7      0.46     21.66   128.86 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  920    55218.7    55232.6      0.80      2.34    36.22 *  add                        vectorized_elementwise_kernel<4>
+  921    55286.3    55300.9      0.78      4.26    66.02 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  922    55334.4    55346.9      0.73      2.02    41.79 *  pow                        vectorized_elementwise_kernel<4,1>
+  923    55377.5    55390.6      0.79      4.86    41.63 *  mean                       reduce_kernel<512,1>
+  924    55426.3    55439.3      0.80      2.11    43.84 *  add                        vectorized_elementwise_kernel<4>
+  925    55462.6    55474.9      0.92      2.27    33.54 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  926    55500.3    55512.7      0.83      2.66    35.46 *  mul                        elementwise_kernel<128,2>
+  927    55556.8    55569.8      0.63      1.98    54.50 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  928    55596.0    55608.3      0.94      2.34    36.48 *  mul                        vectorized_elementwise_kernel<4>
+  929    55685.4    55700.2      0.72     97.66    89.57 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  930    55743.4    55798.9     42.16      3.58     1.09    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  931    55822.8    55837.5      1.03     97.98    35.01 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  932    55872.3    55936.7     51.85      2.91     1.18    mul                        vectorized_elementwise_kernel<4>
+  933    55957.6    55971.1      1.30    115.10    31.46 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  934    55971.5    56087.2    107.87      3.52     1.06    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  935    56020.6    56091.9     58.54      2.59     1.18    add                        vectorized_elementwise_kernel<4>
+  936    56102.4    56117.6      0.90      4.03    23.07 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  937    56151.9    56165.0      1.10      1.98    43.33 *  pow                        vectorized_elementwise_kernel<4,1>
+  938    56195.8    56209.1      0.83      4.70    42.18 *  mean                       reduce_kernel<512,1>
+  939    56245.0    56258.2      0.72      2.05    44.41 *  add                        vectorized_elementwise_kernel<4>
+  940    56281.7    56293.9      0.85      2.30    33.60 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  941    56319.5    56331.6      0.97      2.69    35.46 *  mul                        elementwise_kernel<128,2>
+  942    56375.7    56388.9      0.70      1.95    54.62 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  943    56415.4    56427.6      0.91      2.18    36.74 *  mul                        vectorized_elementwise_kernel<4>
+  944    56515.0    56530.1      0.69     20.38   100.29 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  945    56623.2    56638.4      0.82      8.38    87.87 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  946    56726.6    56740.9      0.63      7.97    94.21 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  947    56807.0    56821.1      0.32      3.97    72.19 *  mul                        elementwise_kernel<128,4>
+  948    56879.6    56892.9      0.81      3.74    67.81 *  neg                        elementwise_kernel<128,4>
+  949    56923.7    56937.3      1.04      5.31    40.67 *  cat                        CatArrayBatchedCopy<4,64,64>
+  950    56964.9    56977.3      0.90      3.42    34.69 *  mul                        elementwise_kernel<128,4>
+  951    57001.9    57013.8      0.68      2.05    33.09 *  add                        vectorized_elementwise_kernel<4>
+  952    57039.3    57051.2      0.96      2.69    35.36 *  mul                        elementwise_kernel<128,4>
+  953    57102.6    57116.1      0.97      2.33    62.21 *  neg                        elementwise_kernel<128,4>
+  954    57145.0    57158.1      0.98      3.42    39.62 *  cat                        CatArrayBatchedCopy<4,64,64>
+  955    57184.2    57196.2      0.81      2.66    34.75 *  mul                        elementwise_kernel<128,4>
+  956    57219.6    57231.4      0.71      2.02    32.51 *  add                        vectorized_elementwise_kernel<4>
+  957    57269.1    57282.9      1.02      3.97    49.50 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  958    57312.6    57325.8      1.09      3.68    38.91 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+  959    57486.7    57501.4      0.32     15.10   171.97 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+  960    57503.9    57517.7      5.78      6.24     1.15    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+  961    57651.0    57667.2      0.64     21.41   143.23 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+  962    57723.9    57737.8      0.82      2.30    49.22 *  add                        vectorized_elementwise_kernel<4>
+  963    57803.4    57818.4      0.47      4.22    78.30 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  964    57854.5    57867.5      0.76      2.02    44.93 *  pow                        vectorized_elementwise_kernel<4,1>
+  965    57900.0    57913.6      0.92      4.93    44.00 *  mean                       reduce_kernel<512,1>
+  966    57950.5    57963.8      0.79      2.08    45.31 *  add                        vectorized_elementwise_kernel<4>
+  967    57987.9    58000.7      0.80      2.21    34.85 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  968    58026.7    58039.4      0.71      2.78    36.45 *  mul                        elementwise_kernel<128,2>
+  969    58085.5    58110.8      0.42      1.98    68.67 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  970    58137.5    58149.8      0.85      2.30    37.02 *  mul                        vectorized_elementwise_kernel<4>
+  971    58227.2    58242.2      0.48     98.33    90.05 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  972    58285.8    58341.7     42.76      3.55     1.15    silu                       vectorized_elementwise_kernel<4,1,5,1>
+  973    58366.3    58381.0      0.96     98.14    35.78 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+  974    58415.8    58480.4     51.62      2.88     1.22    mul                        vectorized_elementwise_kernel<4>
+  975    58501.4    58514.9      1.26    113.60    31.65 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+  976    58515.3    58629.6    106.50      3.55     1.06    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+  977    58564.2    58634.3     57.48      2.75     1.22    add                        vectorized_elementwise_kernel<4>
+  978    58645.2    58660.2      0.94      4.10    23.17 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+  979    58694.4    58707.2      0.83      1.98    42.91 *  pow                        vectorized_elementwise_kernel<4,1>
+  980    58737.9    58750.4      0.46      4.67    41.18 *  mean                       reduce_kernel<512,1>
+  981    58786.0    58799.3      0.96      2.02    44.22 *  add                        vectorized_elementwise_kernel<4>
+  982    58822.2    58834.2      0.98      2.24    32.86 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+  983    58858.8    58870.7      0.82      2.72    34.30 *  mul                        elementwise_kernel<128,2>
+  984    58914.5    58927.9      0.78      1.99    54.49 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+  985    58954.0    58966.4      1.02      2.21    36.45 *  mul                        vectorized_elementwise_kernel<4>
+  986    59053.1    59068.0      0.48     20.29    99.42 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+  987    59160.8    59175.9      0.94      8.45    87.58 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  988    59264.1    59278.5      0.52      7.87    94.21 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+  989    59344.9    59359.2      0.65      3.94    72.77 *  mul                        elementwise_kernel<128,4>
+  990    59416.8    59430.2      0.76      3.74    67.14 *  neg                        elementwise_kernel<128,4>
+  991    59461.1    59474.5      1.05      5.31    40.54 *  cat                        CatArrayBatchedCopy<4,64,64>
+  992    59502.6    59515.1      0.78      3.39    35.29 *  mul                        elementwise_kernel<128,4>
+  993    59540.4    59552.6      1.08      2.05    34.11 *  add                        vectorized_elementwise_kernel<4>
+  994    59577.3    59588.9      0.99      2.66    34.21 *  mul                        elementwise_kernel<128,4>
+  995    59641.3    59654.5      0.81      2.33    62.98 *  neg                        elementwise_kernel<128,4>
+  996    59683.6    59696.5      0.97      3.42    39.62 *  cat                        CatArrayBatchedCopy<4,64,64>
+  997    59722.7    59735.1      1.08      2.69    35.17 *  mul                        elementwise_kernel<128,4>
+  998    59758.3    59769.9      0.90      2.05    32.13 *  add                        vectorized_elementwise_kernel<4>
+  999    59807.2    59820.5      0.88      4.00    48.61 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1000    59850.4    59862.9      0.90      3.68    38.33 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1001    59999.7    60013.8      0.54     15.10   147.26 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+ 1002    60015.6    60030.2      7.01      6.27     1.25    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+ 1003    60156.9    60172.2      0.43     20.99   135.77 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+ 1004    60217.2    60231.1      1.11      2.46    37.92 *  add                        vectorized_elementwise_kernel<4>
+ 1005    60283.8    60298.2      0.68      4.26    64.64 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1006    60332.1    60344.6      0.72      2.02    42.14 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1007    60375.7    60388.7      1.04      4.80    42.05 *  mean                       reduce_kernel<512,1>
+ 1008    60424.3    60437.5      0.71      2.15    43.97 *  add                        vectorized_elementwise_kernel<4>
+ 1009    60460.9    60473.0      0.93      2.11    33.38 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1010    60498.2    60510.3      0.81      2.88    35.20 *  mul                        elementwise_kernel<128,2>
+ 1011    60554.7    60567.9      0.47      2.02    54.69 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1012    60594.7    60607.0      0.62      2.30    37.12 *  mul                        vectorized_elementwise_kernel<4>
+ 1013    60685.3    60700.0      0.70     98.88    90.75 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1014    60743.1    60800.0     43.68      3.58     1.05    silu                       vectorized_elementwise_kernel<4,1,5,1>
+ 1015    60822.8    60837.6      1.02     98.24    34.08 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1016    60871.9    60937.0     52.51      2.88     1.09    mul                        vectorized_elementwise_kernel<4>
+ 1017    60956.6    60970.0      1.24    113.21    30.18 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+ 1018    60970.4    61084.5    106.64      3.52     1.28    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+ 1019    61018.8    61089.2     57.59      2.59     1.18    add                        vectorized_elementwise_kernel<4>
+ 1020    61100.2    61115.0      1.01      4.10    23.23 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1021    61148.5    61161.7      1.03      1.98    42.53 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1022    61192.4    61205.2      0.75      4.67    41.50 *  mean                       reduce_kernel<512,1>
+ 1023    61240.6    61253.5      0.85      2.08    43.68 *  add                        vectorized_elementwise_kernel<4>
+ 1024    61276.6    61288.7      0.78      2.21    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1025    61314.0    61326.3      1.04      2.72    35.39 *  mul                        elementwise_kernel<128,2>
+ 1026    61370.4    61383.6     -6.40      1.92    54.56 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1027    61433.0    61446.9      0.55      2.21    61.44 *  mul                        vectorized_elementwise_kernel<4>
+ 1028    61540.4    61556.2      0.43     20.00   107.04 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+ 1029    61655.0    61670.2      0.66      8.10    94.05 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1030    61847.7    61862.6      0.51      7.84   184.32 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1031    61929.6    61943.8      0.68      3.94    73.37 *  mul                        elementwise_kernel<128,4>
+ 1032    62001.9    62015.4      0.77      3.78    67.61 *  neg                        elementwise_kernel<128,4>
+ 1033    62046.5    62060.1      1.10      5.31    40.93 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1034    62088.1    62100.2      0.95      3.39    34.85 *  mul                        elementwise_kernel<128,4>
+ 1035    62125.3    62137.2      0.75      2.05    33.57 *  add                        vectorized_elementwise_kernel<4>
+ 1036    62162.4    62174.2      1.01      2.69    34.94 *  mul                        elementwise_kernel<128,4>
+ 1037    62227.1    62240.5      0.94      2.33    63.61 *  neg                        elementwise_kernel<128,4>
+ 1038    62269.3    62282.1      0.89      3.46    39.23 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1039    62308.2    62320.1      0.66      2.69    34.56 *  mul                        elementwise_kernel<128,4>
+ 1040    62343.9    62355.5      0.80      2.05    32.70 *  add                        vectorized_elementwise_kernel<4>
+ 1041    62393.3    62407.0      0.95      4.00    49.50 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1042    62436.3    62448.9      0.98      3.68    37.92 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1043    62584.4    62598.3      0.51     15.07   145.63 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+ 1044    62600.0    62614.5      7.23      6.24     1.15    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+ 1045    62743.1    62758.5      0.59     21.54   137.82 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+ 1046    62803.2    62816.9      0.71      2.66    36.86 *  add                        vectorized_elementwise_kernel<4>
+ 1047    62870.7    62885.1      0.57      4.38    65.54 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1048    62919.5    62932.1      0.85      1.98    42.56 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1049    62962.9    62975.9      0.97      4.80    41.89 *  mean                       reduce_kernel<512,1>
+ 1050    63011.7    63024.8      0.67      2.08    44.10 *  add                        vectorized_elementwise_kernel<4>
+ 1051    63048.4    63060.4      0.65      2.30    33.50 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1052    63085.8    63098.0      0.79      2.85    35.26 *  mul                        elementwise_kernel<128,2>
+ 1053    63141.9    63155.3      0.80      2.02    54.46 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1054    63181.5    63193.6      0.84      2.27    36.32 *  mul                        vectorized_elementwise_kernel<4>
+ 1055    63272.0    63286.5      0.45     97.60    90.62 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1056    63330.0    63385.3     42.44      3.58     1.22    silu                       vectorized_elementwise_kernel<4,1,5,1>
+ 1057    63409.6    63424.2      0.85     99.26    35.23 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1058    63459.3    63524.5     52.56      2.94     1.06    mul                        vectorized_elementwise_kernel<4>
+ 1059    63543.8    63557.3      1.19    113.66    29.92 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+ 1060    63557.8    63672.1    106.64      3.58     1.12    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+ 1061    63606.5    63676.9     57.78      2.59     1.18    add                        vectorized_elementwise_kernel<4>
+ 1062    63687.5    63702.5      0.83      4.10    22.97 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1063    63736.9    63749.7      0.91      1.98    43.14 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1064    63780.4    63793.4      0.84      4.67    41.73 *  mean                       reduce_kernel<512,1>
+ 1065    63828.8    63841.8      0.83      2.08    43.74 *  add                        vectorized_elementwise_kernel<4>
+ 1066    63865.0    63877.0      0.90      2.21    33.09 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1067    63901.3    63913.5      0.82      2.72    34.27 *  mul                        elementwise_kernel<128,2>
+ 1068    63956.9    63970.1      0.81      1.98    53.92 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1069    63995.7    64007.9      0.73      2.21    35.84 *  mul                        vectorized_elementwise_kernel<4>
+ 1070    64095.7    64110.8      0.61     20.38   100.67 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+ 1071    64203.5    64218.4      0.95      8.54    87.20 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1072    64306.0    64320.2      0.61      7.97    93.28 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1073    64386.6    64400.6      0.66      3.97    72.38 *  mul                        elementwise_kernel<128,4>
+ 1074    64458.3    64471.6      0.73      3.71    67.04 *  neg                        elementwise_kernel<128,4>
+ 1075    64502.3    64515.6      0.90      5.28    40.35 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1076    64543.5    64555.6      0.86      3.42    34.66 *  mul                        elementwise_kernel<128,4>
+ 1077    64580.2    64592.2      0.91      2.05    33.21 *  add                        vectorized_elementwise_kernel<4>
+ 1078    64617.4    64629.2      0.87      2.69    34.98 *  mul                        elementwise_kernel<128,4>
+ 1079    64681.4    64694.4      0.93      2.34    62.53 *  neg                        elementwise_kernel<128,4>
+ 1080    64722.8    64735.8      1.09      3.46    39.07 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1081    64762.1    64774.4      0.82      2.69    35.07 *  mul                        elementwise_kernel<128,4>
+ 1082    64798.1    64809.6      0.75      2.05    32.54 *  add                        vectorized_elementwise_kernel<4>
+ 1083    64847.5    64861.0      0.87      4.03    49.37 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1084    64890.3    64902.7      0.94      3.68    37.66 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1085    65039.2    65053.3      0.68     15.07   146.85 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+ 1086    65055.0    65069.5      7.12      6.30     1.18    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+ 1087    65195.0    65210.4      0.50     21.47   134.56 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+ 1088    65254.6    65268.3      1.02      2.43    36.48 *  add                        vectorized_elementwise_kernel<4>
+ 1089    65321.6    65336.1      0.81      4.22    65.38 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1090    65369.6    65382.4      0.68      1.98    42.01 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1091    65436.4    65450.6      0.60      4.83    66.21 *  mean                       reduce_kernel<512,1>
+ 1092    65488.6    65502.0      0.67      2.08    46.62 *  add                        vectorized_elementwise_kernel<4>
+ 1093    65526.6    65539.0      0.85      2.27    34.88 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1094    65565.6    65578.3      0.67      2.88    37.05 *  mul                        elementwise_kernel<128,2>
+ 1095    65624.1    65637.9      0.57      1.98    56.67 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1096    65665.5    65678.1      0.78      2.34    38.30 *  mul                        vectorized_elementwise_kernel<4>
+ 1097    65767.3    65782.1      0.67     98.56   101.66 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1098    65825.0    65881.9     43.55      3.58     1.25    silu                       vectorized_elementwise_kernel<4,1,5,1>
+ 1099    65904.7    65919.3      0.90     98.11    33.73 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1100    65953.6    66018.5     52.12      2.91     1.18    mul                        vectorized_elementwise_kernel<4>
+ 1101    66038.5    66052.0      1.10    111.97    30.56 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+ 1102    66052.6    66165.1    105.02      3.55     1.15    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+ 1103    66101.3    66169.8     55.93      2.66     1.15    add                        vectorized_elementwise_kernel<4>
+ 1104    66182.7    66197.8      0.97      4.06    25.34 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1105    66231.3    66244.1      0.95      1.98    42.21 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1106    66274.7    66287.5      0.78      4.67    41.44 *  mean                       reduce_kernel<512,1>
+ 1107    66322.7    66335.6      0.82      2.05    43.39 *  add                        vectorized_elementwise_kernel<4>
+ 1108    66358.7    66370.6      0.64      2.24    32.96 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1109    66396.2    66408.4      1.09      2.72    35.58 *  mul                        elementwise_kernel<128,2>
+ 1110    66452.1    66465.1      0.61      1.98    53.98 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1111    66491.5    66503.5      0.76      2.17    36.42 *  mul                        vectorized_elementwise_kernel<4>
+ 1112    66590.2    66605.2      0.64     20.00    99.52 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+ 1113    66698.4    66713.3      0.72      8.06    88.06 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1114    66801.1    66815.5      0.69      7.93    94.11 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1115    66881.0    66895.2      0.50      3.97    71.84 *  mul                        elementwise_kernel<128,4>
+ 1116    66952.7    66966.1      0.88      3.74    66.91 *  neg                        elementwise_kernel<128,4>
+ 1117    66997.1    67010.8      0.98      5.31    40.90 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1118    67038.7    67051.1      0.86      3.42    35.04 *  mul                        elementwise_kernel<128,4>
+ 1119    67075.6    67087.4      0.79      2.05    32.83 *  add                        vectorized_elementwise_kernel<4>
+ 1120    67112.7    67124.7      0.93      2.72    35.29 *  mul                        elementwise_kernel<128,4>
+ 1121    67177.2    67190.4      0.98      2.34    62.98 *  neg                        elementwise_kernel<128,4>
+ 1122    67219.0    67232.0      1.04      3.42    39.26 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1123    67258.0    67270.0      0.71      2.69    34.56 *  mul                        elementwise_kernel<128,4>
+ 1124    67293.4    67305.2      0.88      2.05    32.54 *  add                        vectorized_elementwise_kernel<4>
+ 1125    67342.8    67356.6      0.99      4.00    49.38 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1126    67385.7    67398.2      0.97      3.78    37.54 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1127    67534.3    67548.3      0.48     15.14   146.33 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+ 1128    67550.0    67564.6      7.51      6.27     1.15    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+ 1129    67690.7    67706.2      0.63     21.18   135.39 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+ 1130    67750.7    67764.3      0.70      2.69    36.86 *  add                        vectorized_elementwise_kernel<4>
+ 1131    67817.3    67831.7      0.61      4.25    64.77 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1132    67866.2    67878.8      0.73      2.02    42.82 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1133    67909.4    67922.5      0.85      4.90    41.69 *  mean                       reduce_kernel<512,1>
+ 1134    67958.4    67971.4      0.55      1.89    44.03 *  add                        vectorized_elementwise_kernel<4>
+ 1135    67994.6    68006.7      0.83      2.24    33.34 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1136    68032.0    68044.4      0.71      2.85    35.49 *  mul                        elementwise_kernel<128,2>
+ 1137    68088.2    68101.7      0.79      1.98    54.43 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1138    68127.7    68139.7      0.61      2.30    36.06 *  mul                        vectorized_elementwise_kernel<4>
+ 1139    68216.2    68230.6      0.42     97.79    88.54 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1140    68273.9    68329.5     42.17      3.55     1.09    silu                       vectorized_elementwise_kernel<4,1,5,1>
+ 1141    68353.9    68368.5      1.00     99.01    35.46 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1142    68403.5    68468.7     52.73      2.88     1.28    mul                        vectorized_elementwise_kernel<4>
+ 1143    68488.3    68501.8      1.19    114.30    30.18 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+ 1144    68502.2    68617.2    107.32      3.49     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+ 1145    68551.0    68622.0     58.31      2.56     1.28    add                        vectorized_elementwise_kernel<4>
+ 1146    68631.7    68646.7      0.99      4.03    22.21 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1147    68680.8    68693.5      0.76      1.98    42.75 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1148    68724.4    68737.3      0.93      4.67    41.82 *  mean                       reduce_kernel<512,1>
+ 1149    68772.6    68785.7      0.91      2.05    43.74 *  add                        vectorized_elementwise_kernel<4>
+ 1150    68808.7    68820.8      0.96      2.21    33.02 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1151    68845.5    68857.7      0.81      2.72    34.72 *  mul                        elementwise_kernel<128,2>
+ 1152    68901.0    68914.2      0.73      1.95    53.76 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1153    68940.0    68952.2      0.99      2.21    36.03 *  mul                        vectorized_elementwise_kernel<4>
+ 1154    69039.3    69054.4      0.53     20.16    99.97 *  linear/addmm               gemv2T_kernel_val<128,16,4,4,false,true>
+ 1155    69147.3    69162.1      1.00      8.45    87.55 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1156    69249.5    69263.7      0.63      7.81    93.15 *  linear/addmm               gemvx::kernel<false,true,true,false,7,false>
+ 1157    69330.2    69344.4      0.76      3.97    72.90 *  mul                        elementwise_kernel<128,4>
+ 1158    69410.3    69424.3      0.59      3.78    75.90 *  neg                        elementwise_kernel<128,4>
+ 1159    69455.6    69469.0      0.93      5.31    40.93 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1160    69497.1    69509.7      0.74      3.42    35.39 *  mul                        elementwise_kernel<128,4>
+ 1161    69535.2    69547.7      1.06      2.05    34.59 *  add                        vectorized_elementwise_kernel<4>
+ 1162    69572.7    69584.8      0.79      2.72    35.10 *  mul                        elementwise_kernel<128,4>
+ 1163    69705.0    69719.1      0.69      2.34   131.52 *  neg                        elementwise_kernel<128,4>
+ 1164    69749.2    69762.2      0.84      3.42    40.83 *  cat                        CatArrayBatchedCopy<4,64,64>
+ 1165    69789.3    69801.9      1.09      2.66    36.22 *  mul                        elementwise_kernel<128,4>
+ 1166    69825.8    69837.7      0.68      2.08    33.18 *  add                        vectorized_elementwise_kernel<4>
+ 1167    69875.3    69888.8      0.79      4.03    48.99 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1168    69918.7    69931.2      0.98      3.65    38.37 *  cat                        CatArrayBatchedCopy_vectorized<3,128,1,16,8>
+ 1169    70067.2    70081.4      0.84     15.10   146.53 *  scaled_dot_product_attenti flash_fwd_splitkv_kernel<128,64,128,4,false,false>
+ 1170    70082.7    70097.6      7.72      6.27     1.18    scaled_dot_product_attenti flash_fwd_splitkv_combine_kernel<4,3,true>
+ 1171    70217.2    70232.4      0.38     21.12   128.45 *  linear/mm                  gemv2T_kernel_val<128,16,2,4,false,false>
+ 1172    70276.8    70290.4      0.75      2.53    36.93 *  add                        vectorized_elementwise_kernel<4>
+ 1173    70343.4    70358.0      0.80      4.22    65.05 *  to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1174    70392.0    70404.7      0.72      2.02    42.43 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1175    70436.0    70448.9      0.79      4.96    42.21 *  mean                       reduce_kernel<512,1>
+ 1176    70484.8    70497.9      0.61      1.86    44.10 *  add                        vectorized_elementwise_kernel<4>
+ 1177    70521.5    70533.7      0.98      2.27    33.92 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1178    70559.0    70571.4      0.77      2.85    35.42 *  mul                        elementwise_kernel<128,2>
+ 1179    70616.0    70629.4      0.66      2.02    55.10 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1180    70655.7    70667.8      0.89      2.27    36.38 *  mul                        vectorized_elementwise_kernel<4>
+ 1181    70744.6    70759.0      0.61     97.60    89.02 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1182    70802.3    70857.8     42.20      3.55     1.12    silu                       vectorized_elementwise_kernel<4,1,5,1>
+ 1183    70882.0    70896.5      0.99     98.17    35.14 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1184    70930.8    70995.7     47.50      2.94     1.06    mul                        vectorized_elementwise_kernel<4>
+ 1185    71022.3    71035.7      1.25    114.49    37.12 *  linear/mm                  cutlass_80_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2
+ 1186    71036.3    71151.3    107.64      3.62     1.09    linear/mm                  splitKreduce_kernel<32,16,false,true,false,false>
+ 1187    71084.8    71156.0     58.43      2.59     1.09    add                        vectorized_elementwise_kernel<4>
+ 1188    71158.5    71173.2      1.02      4.06    14.53    to/copy_                   unrolled_elementwise_kernel<3,7,1,4,1,1>
+ 1189    71207.3    71220.1      1.04      2.02    42.88 *  pow                        vectorized_elementwise_kernel<4,1>
+ 1190    71250.6    71263.4      0.80      4.67    41.28 *  mean                       reduce_kernel<512,1>
+ 1191    71298.6    71311.7      0.73      2.02    43.62 *  add                        vectorized_elementwise_kernel<4>
+ 1192    71335.1    71347.1      0.76      2.27    33.41 *  rsqrt                      vectorized_elementwise_kernel<4,2,2,1>
+ 1193    71372.2    71384.5      1.07      2.69    35.14 *  mul                        elementwise_kernel<128,2>
+ 1194    71428.9    71442.0      0.83      1.92    54.78 *  to/copy_                   vectorized_elementwise_kernel<4,1>
+ 1195    71467.7    71479.9      0.90      2.14    35.97 *  mul                        vectorized_elementwise_kernel<4>
+ 1196    71618.8    71634.6      0.49   1573.93   152.60 *  linear/mm                  gemv2T_kernel_val<128,16,4,4,false,false>
+ 1197    71741.5    73209.8   1456.74      1.02     1.22    argmax                     Memset (Device)
+ 1198    71756.3    73212.2   1442.59     13.22     1.41    argmax                     reduce_kernel<512,1>
