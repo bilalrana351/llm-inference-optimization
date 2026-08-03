@@ -33,8 +33,11 @@ This is Week 5 Part B, unchanged and now due. The gate is the deliverable, not a
   - which loads coalesce and which do not, and why, at the level of what a single warp touches in one instruction
   - the occupancy math for your chosen tile size on sm_86: shared memory per block, registers per thread, resulting blocks per SM
   If any of these three needs hand-waving, that is the part to go back and fix, not to write around.
+  This item was ticked on 2026-08-03 while `docs/gate-phase2.md` did not exist. Unticked. It is the exact failure Part D exists to prevent, so it is left visible rather than quietly corrected.
 
 - [ ] **Take the gate on your own trace (about 3 hours).** Pick one kernel out of the HF decode trace from Part A and diagnose it the same way. Passing on someone else's kernel is the bar. Passing on your own decode path is the proof, and it is also the thing that makes the profiling doc worth reading.
+  Landed: `scripts/dump_step_kernels.py` (one step, kernel by kernel), `scripts/roofline_step.py` (every matmul against the measured bandwidth ceiling), `results/hf_decode_step_kernels.txt`, `results/roofline_step.csv`, and the own-trace half of `docs/gate-phase2.md`. The step is 42 kernels x 28 layers plus a head and a tail, one division predicts all eight matmul shapes across a 590x size range, and 86.6% of the idle gaps are the CPU arriving late rather than the device queueing.
+  Still open, both needing the GPU and about an hour total: `ncu` for the real grid geometry (the 33% grouped-query rows are explained by a reading of a cuBLAS template parameter, which is a hypothesis with a matching prediction, not a measured fact) and `ncu` for sectors per load request (coalescing currently argued from achieved bandwidth, which is strong but indirect). Unticked until those run.
 
 - [ ] **GPU MODE lecture 9, reduction, only if the gate feels shaky (about 2 hours).** Control divergence, memory divergence, and thread coarsening. This is the one lecture allowed this week, and only as a repair, not as new ground. If the gate lands clean, skip it.
 

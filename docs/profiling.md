@@ -177,6 +177,13 @@ engine sits at 70% to 84% of achievable bandwidth. The spread in the throughput
 column is almost entirely the spread in how much of the step the device spends
 working at all.
 
+Those whole-step percentages are averages over 1198 kernels of very different
+quality. `docs/gate-phase2.md` breaks the same step down per matmul against the
+same ceiling, and the spread is wide: the two MLP projections run at 96 to 97%
+of achievable while the two grouped-query attention projections run at 33%,
+because 256 output columns cannot fill 28 SMs. `results/roofline_step.csv` and
+`results/hf_decode_step_kernels.txt` carry the per-kernel numbers.
+
 The other point is the one the ceiling makes visible. vLLM's decode step runs at
 **85% of this card's achievable read bandwidth**, so it is close to the hardware
 limit and there is not much left to win at batch 1. The remaining headroom is not
