@@ -83,15 +83,24 @@ def main() -> None:
         m = median_by(vl, ["batch_size"]).sort_values("batch_size")
         ax.plot(m.decode_tokens_per_sec, m.joules_per_token_gross * 1000,
                 "o-", color="C2", label="vLLM fp16 (batch 1 to max)")
+        label_offsets = {
+            64: (0, 14),
+            128: (8, 7),
+        }
         for _, row in m.iterrows():
+            batch = int(row.batch_size)
+            offset = label_offsets.get(batch, (4, 4))
             ax.annotate(f"b{int(row.batch_size)}",
                         (row.decode_tokens_per_sec,
                          row.joules_per_token_gross * 1000),
-                        textcoords="offset points", xytext=(4, 4), fontsize=7)
+                        textcoords="offset points", xytext=offset, fontsize=7,
+                        ha="center" if batch == 64 else "left",
+                        va="bottom")
     ax.set_xlabel("decode throughput (tokens/sec, aggregate)")
     ax.set_ylabel("energy per generated token (mJ)")
     ax.set_title("Throughput against energy per token (RTX 3060, Qwen2.5-1.5B)")
     ax.set_xscale("log")
+    ax.margins(x=0.08, y=0.08)
     ax.grid(True, alpha=0.3, which="both")
     ax.legend(fontsize=8)
     fig.tight_layout()
