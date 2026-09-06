@@ -2,6 +2,16 @@
 
 Persistent project context for Claude Code. Read at the start of every session.
 
+## Private local context
+
+When `.local-context/bilal-masters-context.local.md` exists, read it at the start
+of sessions involving MS preparation, portfolio positioning, outreach, Mitacs,
+CVs, SOPs, recommendation letters, scholarships, or research strategy. The file
+is local-only and Git-ignored. Never commit it, publish it, or quote private
+details externally without Bilal's explicit approval. For current technical
+project status, inspect the repository and Git history because dated roadmap
+notes in the private context may lag the implemented work.
+
 ## What this repo is
 
 Phase 1 of an LLM inference optimization learning roadmap. The goal is a public, reproducible artifact (this repo plus an accompanying blog post) that demonstrates measured, first-principles understanding of how LLM inference behaves on real hardware. This artifact feeds two longer-term goals: funded MS applications and open-source contributions to LLM serving engines.
@@ -21,13 +31,24 @@ Final-year CS student at NUST Islamabad, founding engineer at an AI startup. Pha
 
 ## Current compute (Vast.ai RTX 3060 box)
 
-We are no longer on Colab. Phase 1 runs on a rented Vast.ai box, see `docs/vastai.md` for the full record. Where this and any older Colab references disagree on hardware, the Vast.ai box wins.
+We are no longer on Colab. The studies run on rented Vast.ai RTX 3060 boxes;
+see `docs/vastai.md` for the per-box record. Every comparison table stays on
+one calibrated box.
 
-- GPU: one NVIDIA RTX 3060, 12GB, on-demand, about $0.045/hr. Ampere, compute capability 8.6 (sm_86).
-- Stack: NVIDIA NGC PyTorch image, driver 580.126.09, CUDA 13.0, torch 2.12.0+cu130 preinstalled. transformers, vLLM, accelerate are NOT preinstalled. HuggingFace and GitHub are both reachable from the box.
-- Persistent working directory is `/workspace`. Storage is billed while stopped, so the repo and the weights cache (`HF_HOME=/workspace/hf-cache`) live in `/workspace`, never `/root` or `/tmp`. Destroy the instance when done for the week.
-- Two environments on purpose. Environment A (HF baseline) uses the preinstalled torch 2.12, just add transformers + accelerate. Environment B (vLLM) is a fresh venv at `/workspace/vllm-env` where vLLM brings its own matching torch for CUDA 13.0 (uv recommended: `uv pip install vllm --torch-backend=cu130`). Do NOT `pip install vllm` into Environment A: it would clobber torch 2.12 with vLLM's bundled 2.11.
-- The sm_86 card resolves the old T4 attention-backend worry: FlashAttention and vLLM's good kernels support this card, so no fallback backend.
+- Current box E: one NVIDIA RTX 3060 12GB, Ampere sm_86, driver 570.133.20,
+  CUDA 12.8. Its measured achievable read bandwidth is 351.1 GB/s and fp16
+  tensor throughput is 25.67 TFLOP/s.
+- `/workspace` is the container overlay with no mounted volume. It is
+  non-persistent, so sync scripts in and copy results out before recycle or
+  destroy.
+- Environment A is `/venv/main`: torch 2.11.0+cu128 plus the analysis packages.
+  Environment B is `/workspace/vllm-env`: vLLM 0.10.2, torch 2.8.0+cu128,
+  transformers 4.53.2, and NumPy 2.2.6. Model caches live under
+  `/workspace/hf-cache` only while this box exists.
+- Keep Environment B separate from Environment A because vLLM is binary-tied
+  to its own torch build.
+- The sm_86 card supports the required CUDA and attention kernels, so the old
+  T4 fallback concern does not apply.
 
 ## Hard technical constraints (these change your decisions)
 
@@ -39,17 +60,26 @@ We are no longer on Colab. Phase 1 runs on a rented Vast.ai box, see `docs/vasta
 
 ## Workflow
 
-- Claude Code runs on the box. Claude Code is over SSH directly on the rented Vast.ai machine, so it edits, runs on the GPU, reads tracebacks, and commits all in one place. No laptop-to-runner git push/pull loop.
-- Claude Code needs Node, which the NGC image may not include. If `node --version` fails, install a current Node, then `npm install -g @anthropic-ai/claude-code`. Set git identity on the box so commits are attributed correctly.
+- Work locally, sync only the required scripts to `/workspace`, run them over
+  SSH, and copy raw results and plots back immediately. The rented container is
+  a runner, not the source of truth.
+- Read `/etc/vast-agents-guide.md` before operating a fresh Vast box. It records
+  the container's persistence and privilege rules.
 - The repo is the artifact: keep it clean, reproducible, and documented. Pin dependency versions (the vLLM install is the main friction point of this phase, now the fresh CUDA 13.0 / torch 2.12 stack rather than a Turing backend issue). Prefer runnable scripts over notebook-only code so results reproduce.
 - Commit experiment outputs (plots, CSV logs) alongside the code that produced them.
 
 ## Where this is heading (later phases)
 
 - Phase 0 (done): the theory.
-- Phase 1 (this repo): baseline, vLLM, and the OOM experiment on real hardware.
-- Later phases: build and explain the optimizations that account for the baseline-vs-vLLM gap. PagedAttention (vLLM's KV-cache paging), continuous batching, kernel fusion, CUDA graphs, and getting Python out of the decode hot loop. The wins come from memory traffic and fusion, not faster FLOPs: you cannot beat cuBLAS on a raw GEMM.
-- OSS target: SGLang specifically. It has under half of vLLM's contributor count, so visibility per PR is higher, and it is backed by xAI, Oracle, LinkedIn, and Cursor. A measured, hardware-grounded contribution (for example ROCm / MI300X enablement, which AMD staffs in the open and is less crowded) is the kind of artifact that the people doing hiring actually see.
+- Phase 1 (done): baseline, vLLM, the OOM experiment, and the batching sweep on real hardware.
+- Phase 2 (done, except two open ncu measurements listed at the end of `docs/gate-phase2.md`): profiling the decode step (`docs/profiling.md`) and the kernel-diagnosis gate (`docs/gate-phase2.md`). The measured answer to the engine gap: 90% is CPU-launch idle removed by CUDA graphs, 9% is faster device work from vLLM's hand-written fused kernels, and torch.compile is worth nothing once graphs are on.
+- Phase 3 (current): energy per token, compressed tensor formats, KV-cache
+  eviction, and serving under load are complete. Only the optional model
+  splitting stretch study remains, as defined in `docs/phase3.md`.
+- OSS target: vLLM. This replaces the earlier SGLang plan because the strongest
+  Mitacs and Canadian supervisor fits work on vLLM serving, and vLLM has wider
+  name recognition. The concrete goal is one real merged contribution in KV-cache
+  management, scheduling, or quantization.
 - Hardware path later: the NUST HPC cluster for larger runs (1x V100 on compute1, 2x T4 on compute3 and compute4, SLURM scheduler). On that cluster: download weights on the login node first because compute nodes may be firewalled, use non-root conda or venv installs into the home directory, never run jobs on the master node, and request `--gres=gpu:t4:1` or `--gres=gpu:v100:1` as appropriate.
 
 ## The eventual goal: MS applications

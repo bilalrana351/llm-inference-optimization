@@ -52,6 +52,85 @@ pip install vllm
 
 Run the vLLM benchmark (Task 2) from Environment B. Same model, same prompt, same max tokens, batch size 1, so the comparison against Environment A stays fair.
 
+## Box C (2026-09-01, the energy and tensor-format studies)
+
+Phase 3 study 1 ran on a third rented 3060, and the workflow changed with it:
+the box is driven over SSH from the laptop (scripts written locally, synced
+with rsync, results pulled back) rather than Claude Code living on the box.
+
+- GPU: RTX 3060 12288 MiB, sm_86, driver 595.71.05. Vast base image (not
+  NGC), CUDA 12.8 toolkit, system python via `/venv/main`, `/workspace` on
+  the container overlay (no volume, nothing survives a recycle).
+- Calibration (`measure_bandwidth.py`): 341.4 GB/s achievable read, 26.2 fp16
+  tensor TFLOP/s. Compare the profiling box's 291.5 GB/s: three boxes, three
+  speeds, same listing name. One box per comparison table, always.
+- Environment A: torch 2.11.0+cu128 plus the pinned requirements. Environment
+  B: vLLM 0.28.0 with torch 2.13.0+cu130 (the current vLLM wheel is built
+  against CUDA 13, so `--torch-backend=cu128` fails at import with a missing
+  libcudart.so.13; cu130 is the working install).
+- Tensor-format build tools: CUDA 12.8 `nvcc` and Ninja 1.11.1. The handwritten
+  2:4 GEMV was compiled for sm_86 through PyTorch's C++ extension loader.
+- HF batch-1 fp16 decodes at 59.5 tok/s here against 24.6 on the profiling
+  box: HF is launch-bound, so the host CPU moves it far more than the GPU
+  name suggests. The engine gap itself is host-dependent.
+- `ncu` is present but GPU performance counters are blocked in this
+  containerized instance (ERR_NVGPUCTRPERM). The two open gate measurements
+  in docs/gate-phase2.md need a VM-based instance instead.
+
+## Box D (2026-09-03, the KV-cache eviction study)
+
+Study 3 ran on a fourth rented 3060, again driven over SSH from the laptop.
+This was a Vast container without a mounted volume, so `/workspace` was
+ephemeral and the completed artifacts were copied back immediately after the
+run.
+
+- GPU: RTX 3060 12288 MiB, sm_86, driver 580.173.02, CUDA 12.8 toolkit.
+- Environment A: torch 2.11.0+cu128, transformers 4.46.3, datasets 3.1.0,
+  and the remaining pinned requirements in `/venv/main`.
+- Calibration: 340.9 GB/s achievable streaming read (94.7% of the 360 GB/s
+  theoretical rate), 7.42 fp32 SIMT TFLOP/s, 13.10 TF32 TFLOP/s, and 26.15
+  fp16 tensor TFLOP/s.
+- Quality workload: WikiText-2 test, 4,096 unscored warmup predictions and
+  2,048 scored predictions. The full-cache perplexity was 11.213. A
+  4,096-token sink-and-window cache used 33% less live KV memory and measured
+  11.219 perplexity.
+- Systems workload: exact synthetic KV shapes through real SDPA decode. At a
+  120,000-token starting context, full cache used 3,281.6 MiB and decoded at
+  4.26 tokens/sec. A 512-token window used 14 MiB and decoded at 29.17
+  tokens/sec, a 6.84x speedup.
+
+The environment began empty, and the official torch wheel host was unusually
+slow on a single connection. The wheel was downloaded in verified byte ranges,
+reassembled, and checked against its official SHA-256 before installation. This
+was an installation workaround only and does not affect the benchmark method.
+
+## Box E (2026-09-03, the serving-under-load study)
+
+Study 4 ran on a fifth rented 3060, driven over SSH from the laptop. Like Box
+D, `/workspace` is part of the container overlay rather than a mounted volume.
+Stop and start preserve the container, but recycle or destroy erase it. All
+completed results were copied back immediately.
+
+- GPU: RTX 3060 12288 MiB, sm_86, driver 570.133.20, CUDA 12.8 toolkit. The
+  card exposes a 150 W power limit and a 7501 MHz maximum memory clock.
+- Calibration: 351.1 GB/s achievable streaming read against a 360.0 GB/s
+  clock-derived peak, 7.12 fp32 SIMT TFLOP/s, 12.83 TF32 TFLOP/s, and 25.67
+  fp16 tensor TFLOP/s. The 3 GiB read buffer is far larger than L2, although
+  the 97.5% read-to-theoretical ratio is unusually high and is reported as
+  measured rather than assumed.
+- Environment A: `/venv/main` with torch 2.11.0+cu128 for calibration and the
+  plotting packages. Environment B: vLLM 0.10.2 with torch 2.8.0+cu128,
+  transformers 4.53.2, and NumPy 2.2.6 in `/workspace/vllm-env`.
+- The current default vLLM wheel targets CUDA 13 and cannot run against this
+  consumer card's CUDA 12.8 driver. vLLM 0.10.2 supplies CUDA 12.8 binaries.
+  Its unconstrained dependencies now resolve to Transformers 5.x and NumPy
+  2.5, both too new for this release, so the two compatibility pins above are
+  part of the reproducible environment.
+- The four-config load sweep completed 4,608 requests with no errors and no
+  preemptions. Poisson SLO capacity was 2 requests/s for every configuration;
+  fixed bursts of eight missed the TTFT SLO at every tested mean rate. Full
+  method and results are in `docs/load-results.md`.
+
 ## One tooling note
 
 Claude Code needs Node, which the NGC image likely does not include. If `node --version` fails, install a current Node first, then `npm install -g @anthropic-ai/claude-code`. Set git identity (`git config --global user.name` / `user.email`) so commits from the box are attributed correctly.

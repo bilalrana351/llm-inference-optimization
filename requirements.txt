@@ -30,6 +30,16 @@ safetensors==0.4.4
 matplotlib==3.9.2
 pandas==2.2.2
 
+# --- long-context quality evaluation (Phase 3 study 3, KV eviction) ---
+# WikiText-2 supplies a fixed public token stream for the perplexity curve.
+datasets==3.1.0
+
+# --- GPU power sampling (Phase 3 study 1, the energy study) ---
+# bench_common.PowerSampler reads board power and the driver energy counter
+# through NVML. The pynvml name still resolves (torch itself imports it) but
+# upstream renamed the package, hence the modern name.
+nvidia-ml-py
+
 # --- 4-bit quantization (Week 3, the FP16-vs-NF4 experiment) ---
 # bitsandbytes goes into Environment A (the HF venv on torch 2.12), since the
 # 4-bit baseline runs through the transformers path. It ships compiled CUDA
@@ -54,3 +64,8 @@ bitsandbytes==0.49.2
 #   vllm==0.23.0  (v1 engine)  with torch 2.11.0+cu130 that the wheel pulls in
 # Install line used:
 #   uv pip install vllm --torch-backend=cu130
+#
+# Phase 3 study 4 ran on a different CUDA 12.8 box. Its isolated Environment B
+# used vllm==0.10.2 with torch==2.8.0+cu128. Current package resolution also
+# required explicit transformers==4.53.2 and numpy==2.2.6 pins. The complete
+# install and server command are in docs/load-results.md.

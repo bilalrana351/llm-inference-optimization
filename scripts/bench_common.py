@@ -204,6 +204,230 @@ def write_result(result: BenchResult, csv_path: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# GPU power and energy (the energy study, Phase 3 study 1)
+# ---------------------------------------------------------------------------
+
+class PowerSampler:
+    """Samples GPU board power on a background thread and integrates energy.
+
+    Two independent measurements, recorded side by side so each can check the
+    other:
+
+      1. Power integration. nvmlDeviceGetPowerUsage (total board power, in
+         milliwatts) is sampled every interval_s on a daemon thread, and
+         joules(t0, t1) trapezoid-integrates the samples over a window given in
+         time.perf_counter() seconds, the same clock every timer in this repo
+         uses.
+      2. The driver's own energy counter. nvmlDeviceGetTotalEnergyConsumption
+         is a monotonically increasing millijoule counter maintained by the
+         driver itself. It is supported on some cards and driver builds, not
+         all; energy_mj() returns None when unsupported. When it exists, the
+         difference of two reads is the exact energy between them, with none of
+         the sampling error of method 1.
+
+    NVML refreshes board power at its own internal rate, often slower than the
+    sampling interval, so consecutive samples repeat values.
+    observed_update_interval_ms() reports the median time between value
+    changes; a run should be long enough to span at least ~50 such updates or
+    its integral is built on too few real observations.
+
+    Usage:
+        sampler = PowerSampler()
+        sampler.start()
+        e0 = sampler.energy_mj()
+        torch.cuda.synchronize(); t0 = time.perf_counter()
+        ... gpu work ...
+        torch.cuda.synchronize(); t1 = time.perf_counter()
+        e1 = sampler.energy_mj()
+        sampler.stop()
+        joules_integrated = sampler.joules(t0, t1)
+        joules_counter = (e1 - e0) / 1000.0 if e0 is not None else None
+    """
+
+    def __init__(self, device: int = 0, interval_s: float = 0.02):
+        import threading
+
+        self.device = device
+        self.interval_s = interval_s
+        self.samples: list[tuple[float, float]] = []  # (perf_counter s, watts)
+        self._stop_event = threading.Event()
+        self._thread: object | None = None
+        self._nvml = None
+        self._handle = None
+        self.energy_counter_supported = False
+        self.driver_version = ""
+
+    def start(self) -> None:
+        import threading
+
+        import pynvml
+
+        pynvml.nvmlInit()
+        self._nvml = pynvml
+        self._handle = pynvml.nvmlDeviceGetHandleByIndex(self.device)
+        try:
+            self.driver_version = str(pynvml.nvmlSystemGetDriverVersion())
+        except Exception:
+            self.driver_version = ""
+        self.energy_counter_supported = self.energy_mj() is not None
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:
+        import time
+
+        while not self._stop_event.is_set():
+            try:
+                mw = self._nvml.nvmlDeviceGetPowerUsage(self._handle)
+                self.samples.append((time.perf_counter(), mw / 1000.0))
+            except Exception:
+                pass
+            self._stop_event.wait(self.interval_s)
+
+    def stop(self) -> None:
+        if self._thread is not None:
+            self._stop_event.set()
+            self._thread.join(timeout=5.0)
+            self._thread = None
+        if self._nvml is not None:
+            try:
+                self._nvml.nvmlShutdown()
+            except Exception:
+                pass
+            self._nvml = None
+            self._handle = None
+
+    def energy_mj(self) -> float | None:
+        """Driver energy counter in millijoules, or None if unsupported."""
+        if self._nvml is None or self._handle is None:
+            return None
+        try:
+            return float(self._nvml.nvmlDeviceGetTotalEnergyConsumption(self._handle))
+        except Exception:
+            return None
+
+    def _window(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        return [(t, w) for (t, w) in self.samples if t0 <= t <= t1]
+
+    def joules(self, t0: float, t1: float) -> float:
+        """Trapezoid-integrated energy over [t0, t1], in joules.
+
+        Samples inside the window are integrated pairwise; the stubs between t0
+        and the first sample, and between the last sample and t1, are filled as
+        rectangles at the nearest sample's power. If no sample landed inside
+        the window (a window shorter than the sampling interval), the nearest
+        sample overall is used as a constant, which is the honest fallback for
+        a window the instrument cannot resolve.
+        """
+        if t1 <= t0:
+            return 0.0
+        inside = self._window(t0, t1)
+        if not inside:
+            if not self.samples:
+                return 0.0
+            nearest = min(self.samples, key=lambda s: min(abs(s[0] - t0), abs(s[0] - t1)))
+            return nearest[1] * (t1 - t0)
+        total = inside[0][1] * (inside[0][0] - t0)
+        for (ta, wa), (tb, wb) in zip(inside, inside[1:]):
+            total += 0.5 * (wa + wb) * (tb - ta)
+        total += inside[-1][1] * (t1 - inside[-1][0])
+        return total
+
+    def mean_watts(self, t0: float, t1: float) -> float:
+        if t1 <= t0:
+            return 0.0
+        return self.joules(t0, t1) / (t1 - t0)
+
+    def observed_update_interval_ms(self) -> float:
+        """Median milliseconds between changes of the reported power value.
+
+        This is the instrument's real resolution, as opposed to the sampling
+        interval. Windows should span many of these.
+        """
+        changes = []
+        last_t, last_w = None, None
+        for t, w in self.samples:
+            if last_w is not None and w != last_w:
+                changes.append(t - last_t)
+                last_t = t
+            elif last_w is None:
+                last_t = t
+            last_w = w
+        if not changes:
+            return 0.0
+        changes.sort()
+        return 1000.0 * changes[len(changes) // 2]
+
+
+@dataclass
+class EnergyResult:
+    """One measured energy run. Written as a single CSV row.
+
+    joules_per_token_gross is decode energy over generated tokens as the wall
+    sees it. joules_per_token_net subtracts the idle floor (idle_watts times
+    decode seconds) so configurations with very different runtimes can be
+    compared on the work itself. Counter fields are -1.0 when the driver does
+    not expose the energy counter.
+    """
+
+    engine: str
+    model: str
+    dtype: str
+    batch_size: int
+    prompt_tokens: int
+    new_tokens: int
+
+    prefill_seconds: float
+    decode_seconds: float
+    decode_tokens_per_sec: float
+
+    idle_watts: float
+    mean_watts_decode: float
+    prefill_joules: float
+    decode_joules: float
+    total_joules: float
+    joules_per_token_gross: float
+    joules_per_token_net: float
+
+    # Which instrument produced the primary joules above. The driver's energy
+    # counter is exact and preferred; power integration is the fallback and is
+    # always recorded as a cross-check. On the first smoke run the two
+    # disagreed 2.2x on a sub-second window because NVML power updates only
+    # every ~500 ms on this card, which is why the counter is primary.
+    energy_method: str = "integration"
+    integrated_total_joules: float = 0.0
+    counter_total_joules: float = -1.0
+    energy_counter_supported: bool = False
+
+    power_samples: int = 0
+    power_update_interval_ms: float = 0.0
+
+    device_used_mib: float = 0.0
+    oom: bool = False
+    note: str = ""
+
+    gpu_name: str = field(default_factory=lambda: _gpu_name())
+    driver_version: str = ""
+    torch_version: str = field(default_factory=lambda: torch.__version__)
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
+    )
+
+
+def write_energy_result(result: EnergyResult, csv_path: str) -> None:
+    """Append an energy row, writing the header if the file is new."""
+    os.makedirs(os.path.dirname(csv_path) or ".", exist_ok=True)
+    row = asdict(result)
+    is_new = not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if is_new:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+# ---------------------------------------------------------------------------
 # Analytical KV-cache size (Phase 0 formula, reused by the OOM sweep)
 # ---------------------------------------------------------------------------
 

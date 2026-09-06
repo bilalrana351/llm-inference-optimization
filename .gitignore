@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.local-context/
 
 # Python
 __pycache__/
@@ -42,3 +43,6 @@ nohup.out
 
 # vLLM per-worker profiler dumps; the copied trace in results/ is the artifact
 results/vllm_trace/
+
+# Study 4 server diagnostics; CSV metrics are the reproducible artifact
+results/load_server_*.log
