@@ -1,36 +1,66 @@
 # llm-inference-optimization
 
-A lab notebook of measured studies on LLM inference performance, all on a
-single 12GB RTX 3060: how big the gap between a naive and an optimized engine
-really is and where it comes from kernel by kernel, what the KV cache costs
-until the card dies, what quantization buys and does not buy, and where
-batching stops paying.
+This repository contains measured studies of how LLM inference behaves on a
+12 GB GPU. Each study includes a clear question, runnable code, raw data,
+plots, and a detailed report. Every comparison uses one calibrated RTX 3060,
+so results from different machines are never mixed in the same table.
 
-Every study follows the same discipline: one question, a reproducible script,
-raw CSVs and plots committed alongside the code, and a writeup that separates
-method from raw numbers from interpretation. The goal is a measured artifact,
-not code that ran once.
+For simpler explanations, read the
+[blog](https://www.bilalrana.com/blog/).
 
-## Results at a glance
+## Featured studies
 
-| question | measured answer | writeup |
+### 1. Do quantization and sparsity make inference faster?
+
+Smaller weights were not automatically faster. NF4 helped at batch 1 but became
+slower at larger batches because it used a different kernel path. INT8 helped
+only when the matrix was large enough. A custom CUDA 2:4 sparse kernel showed
+that speed depends on both the representation and the kernel.
+
+[Read the blog](https://www.bilalrana.com/blog/does-compression-make-llm-inference-faster/)
+or [see the code, data, and full report](docs/formats-results.md).
+
+### 2. How much energy does LLM inference use?
+
+NF4 drew less power at batch 1 but also ran for longer. Batching made the larger
+difference, reducing gross energy from 1,552 mJ per token at batch 1 to 39 mJ
+per token at batch 128.
+
+[Read the blog](https://www.bilalrana.com/blog/lower-power-higher-energy/)
+or [see the code, data, and full report](docs/energy-results.md).
+
+### 3. How much KV cache can be pruned before quality degrades?
+
+Removing one-third of the cache changed perplexity from 11.213 to 11.219. A
+bounded recent window also kept memory use and decode time almost flat as the
+total context became longer.
+
+[Read the blog](https://www.bilalrana.com/blog/how-much-kv-cache-can-you-prune/)
+or [see the code, data, and full report](docs/eviction-results.md).
+
+### 4. What happens when an LLM server receives too much traffic?
+
+First-token latency failed before the time between later tokens. Fixed bursts
+of eight requests missed the latency target even at a low average request rate,
+showing that throughput alone does not describe the user experience.
+
+[Read the blog](https://www.bilalrana.com/blog/what-breaks-first-under-load/)
+or [see the code, data, and full report](docs/load-results.md).
+
+## Earlier studies
+
+| Question | Measured answer | Full report |
 | --- | --- | --- |
-| How big is the HuggingFace-to-vLLM gap? | ~4x decode throughput at batch 1 (18 to 23 tok/s against ~80), ~1.1x prefill. Decode memory-bandwidth utilization rises from 15 to 20% to ~68%. | [docs/baseline-vllm-results.md](docs/baseline-vllm-results.md) |
-| Where does the gap come from? | 90% is removed CPU-launch idle, 9% faster kernels, measured by a torch.compile x CUDA-graphs ablation. Eager HF launches 1,198 kernels per token and idles the GPU 62.3% of each step; graphs replay the step with 17 CPU launches and near-zero idle. | [docs/profiling.md](docs/profiling.md) |
-| Where is the KV-cache memory wall on 12 GB? | OOM at 123,565 tokens of context. Measured growth is 60 KB/token against the 28 KB/token analytical line: the 2x is copy-on-grow reallocation from `torch.cat`, and allocator fragmentation ends the run with 1.3 GiB still free but unusable. | [docs/oom-results.md](docs/oom-results.md) |
-| What does 4-bit NF4 quantization buy? | Memory, not speed, at batch 1: weights drop 2945 to 1099 MiB, decode gets slower because dequantization runs every layer every step. The freed VRAM moves the OOM cliff out. | [docs/baseline-hf-results.md](docs/baseline-hf-results.md) |
-| Where does batching stop paying? | Three measured regions: near-linear memory-bound scaling, the compute ceiling, then the KV-cache wall where requests queue and latency diverges. | [docs/batching-results.md](docs/batching-results.md) |
-| Can first principles predict real kernels? | One bytes-per-output division predicts all eight matmul shapes in a decode step across a 590x size range, from a measured 291.5 GB/s bandwidth ceiling. MLP projections run at 96 to 97% of achievable bandwidth, grouped-query attention projections at 33%. | [docs/gate-phase2.md](docs/gate-phase2.md) |
-| What does a token cost in energy? | Batching is the energy lever: 1552 mJ/token at batch 1 falls to 39 mJ at batch 128 (40x) because board power stays near 150 W regardless. NF4 is 1.2x worse on gross energy and 1.5x better net of idle: sleepable or busy GPUs favor fp16, an always-on idle box can favor NF4, and at low QPS the 38 W floor dwarfs both. | [docs/energy-results.md](docs/energy-results.md) |
-| Do compressed tensor formats turn saved bytes into speed? | Only with a matching kernel and batch regime. Across the real decode matmuls, NF4 is 1.75x faster at M=1 but 2.09x slower at M=8. INT8 is unsupported below M=17, then wins 1.55x to 1.77x. Library 2:4 is 2.88x slower at M=1 despite 0.5625x weight storage; a handwritten CUDA GEMV recovers a 1.06x aggregate win. | [docs/formats-results.md](docs/formats-results.md) |
-| How much KV cache can be evicted before quality and speed move? | A 4,096-token sink-and-window cache removed one-third of a 6,144-token WikiText context with perplexity effectively unchanged (11.213 to 11.219). At 120k context, a 512-token window held KV memory at 14 MiB and decode at 29.17 tok/s versus 3,281.6 MiB and 4.26 tok/s full cache, a 6.84x speedup. The simple attention-score policy was worse than the recent window at every budget. | [docs/eviction-results.md](docs/eviction-results.md) |
-| What breaks first when requests arrive under load? | First-token latency, not decode latency. Poisson traffic meets a 1 s TTFT and 100 ms TPOT SLO through 2 requests/s, then misses at 3. Fixed bursts of eight miss TTFT even at 0.5 requests/s mean load. Memory 0.5 and chunked prefill do not move the knee; `max_num_seqs=16` protects TPOT under overload by making TTFT and the waiting queue worse. | [docs/load-results.md](docs/load-results.md) |
+| How large is the HuggingFace to vLLM gap? | vLLM produced about 4 times more decode tokens per second at batch 1. Prefill performance was similar. | [Baseline and vLLM](docs/baseline-vllm-results.md) |
+| Where does the speed difference come from? | CUDA graphs removed most of the time spent waiting between kernel launches. Eager HuggingFace launched 1,198 kernels per token, while graph replay used 17 CPU launches. | [Profiling](docs/profiling.md) |
+| Where does the KV cache run out of memory? | The run failed at 123,565 context tokens. Cache growth, buffer copying, and allocator fragmentation explain why the measured memory cost was above the analytical estimate. | [OOM study](docs/oom-results.md) |
+| What does NF4 quantization provide at batch 1? | Model weights fell from 2,945 MiB to 1,099 MiB, but decode became slower. NF4 saved memory rather than execution time in this case. | [HuggingFace baseline](docs/baseline-hf-results.md) |
+| Where does batching stop helping? | Throughput first scaled almost linearly, then reached the compute limit, and finally reached the KV-cache limit where requests began waiting. | [Batching](docs/batching-results.md) |
+| Can a simple hardware model predict kernel time? | A bytes-per-output model described all eight decode matrix multiplications across a 590 times size range and showed which projections used bandwidth poorly. | [Kernel analysis](docs/gate-phase2.md) |
 
-Two methodology findings worth stealing: two "identical" rented 3060s differed
-by a uniform 1.22x in device busy time, so every comparison table here is
-pinned to one box, and the advertised 360 GB/s is a spec while the measured
-streaming-read ceiling is 291.5 GB/s, which is the honest denominator for any
-bandwidth-utilization claim.
+Two rented RTX 3060 machines with the same listed specifications differed by
+1.22 times in device execution time. For that reason, every comparison stays
+on one machine and uses that machine's measured bandwidth.
 
 ## What is here
 
@@ -112,7 +142,7 @@ loop, so the only change is how the weights are stored:
 python scripts/baseline_hf.py --model Qwen/Qwen2.5-1.5B --prompt-tokens 512 --new-tokens 256 --quant nf4
 ```
 
-The lesson is that 4-bit is a memory lever, not a speed lever at batch 1: weights
+The lesson is that 4-bit saves memory but does not save time at batch 1: weights
 drop from ~2945 to ~1099 MiB, but decode slows (bitsandbytes dequantizes NF4 to
 fp16 every layer every step, and decode was already memory-bound). The freed VRAM
 is the win, and it moves the OOM cliff out.
