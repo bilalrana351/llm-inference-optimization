@@ -6,7 +6,9 @@ decode step, NF4 cut the `M=1` device time from 10.86 to 6.20 ms, a 1.75x
 speedup. At `M=8`, the same format took 23.71 ms and was 2.09x slower than
 dense fp16. INT8 did not run at `M=1` or `M=8`, then won by 1.55x at `M=32`
 and 1.77x at `M=128`. PyTorch's 2:4 sparse path moved 0.5625x the fp16 weight
-bytes but was 2.88x slower than dense at `M=1`.
+bytes but was 2.88x slower than dense at `M=1`. A later recheck (see
+"Recheck: accuracy and host overhead") showed that most of that loss was
+PyTorch's CPU-side wrapper overhead, not the cuSPARSELt GPU kernel.
 
 The bytes model predicted the direction only when the execution path stayed
 close to one streaming kernel. Compressed storage is a necessary condition for
@@ -133,7 +135,7 @@ The weighted INT8 runtime is 1.46x to 1.50x its byte floor, close to dense's
 1.34x to 1.98x. Once the shape is supported and large enough, byte traffic is a
 useful predictor again.
 
-### cuSPARSELt has a shape floor
+### PyTorch's 2:4 path has a per-call floor
 
 The library 2:4 path wins only on the 466.7 MB `lm_head`: 1.41x at `M=1`,
 1.49x at `M=8` and `M=32`, and 1.77x at `M=128`. It takes about 0.10 to 0.20 ms
@@ -141,11 +143,12 @@ even on smaller projections. That floor makes it 18x to 20x slower than dense
 on the two 0.79 MB GQA weights at `M=1`, and it loses on every layer projection
 at every `M` in this sweep.
 
-The full-step sparse total is 4.6x to 6.1x its byte floor. cuSPARSELt can turn
-sparsity into speed when the matrix is large enough, but its available kernel
-is not a drop-in decode GEMV win on this card.
+The full-step sparse total is 4.6x to 6.1x its byte floor. The recheck below
+found that this per-call floor is CPU time in PyTorch's semi-structured
+wrapper, which falls inside the CUDA-event window. It is not a cost of the
+cuSPARSELt GPU kernel. These `M=8`, `M=32`, and `M=128` rows still include it.
 
-### The handwritten kernel removes the library floor, not every bottleneck
+### The handwritten kernel avoids the wrapper floor, not every bottleneck
 
 The CUDA GEMV cuts the `down_proj` time from 0.101 to 0.070 ms, a 1.45x win,
 and matches dense within one CUDA-event tick on four smaller projections. It is
@@ -153,10 +156,47 @@ slower on `lm_head` because its one-block-per-output reduction does not match
 cuBLAS or cuSPARSELt on the largest matrix. Weighted across the step it is 1.06x
 faster than dense, far below the 1.78x storage ratio ceiling.
 
-This separates two claims. The library's 2:4 loss on small shapes is not proof
-that compressed bytes cannot help: a simple kernel removes most of that fixed
-cost. But compressed storage alone still does not supply the scheduling,
-vectorization, and tensor-core use needed to reach the byte floor.
+Its win over the library path comes from its call path: the extension spends
+about 14 us of CPU time per call. GPU kernel against GPU kernel, cuSPARSELt is
+about 6% faster over a decode step (recheck below). Compressed storage alone
+still does not supply the scheduling, vectorization, and tensor-core use needed
+to reach the byte floor.
+
+## Recheck: accuracy and host overhead
+
+Run on 2026-10-20 on a different rented RTX 3060 (driver 580.126.09, CUDA 13.0,
+torch 2.14.1+cu130, Xeon E5-2680 v4 host). Its numbers stay in their own
+tables. The handwritten kernel and cuBLAS times matched the original box within
+1%.
+
+**Accuracy.** `scripts/check_accuracy.py` compares the handwritten kernel,
+cuSPARSELt, and cuBLAS with an fp32 product computed from the same fp16 weights
+and input, over 5 seeds per shape. The bound for fp32 accumulation and one
+rounding to fp16 is `|e_i| <= 2^-11 |ref_i| + K 2^-24 (|W||x|)_i`. Every output
+of every path was within it. The handwritten kernel's worst normwise relative
+error was 4.4e-4, below the fp16 unit roundoff of 4.9e-4. Its worst absolute
+error was 0.124 on `down_proj`, where outputs reach about 280 to 350 and fp16
+spacing is 0.25. The 0.25 reported earlier was two fp16 results one step apart.
+The fp32 reference differed from fp64 by at most 5.8e-8 componentwise. Raw rows
+are in `results/accuracy.csv`.
+
+**Host overhead.** `scripts/graph_timing.py` times each `M=1` path with the
+same L2 flush, warmup, and median of 20 CUDA-event samples, once called eagerly
+and once replayed from a CUDA graph. The replay removes CPU dispatch from the
+timed window. Weighted decode-step totals:
+
+| path | eager (ms) | CUDA graph (ms) | eager CPU time per call |
+| --- | ---: | ---: | ---: |
+| dense fp16 (cuBLAS) | 10.87 | 10.80 | 28 to 36 us |
+| 2:4 sparse, cuSPARSELt | 148.16 | 9.57 | 852 to 1171 us |
+| 2:4 sparse, handwritten CUDA | 10.27 | 10.18 | 14 to 15 us |
+
+On this slower host, eager cuSPARSELt calls took 0.5 to 0.8 ms on small
+projections, against 0.12 to 0.19 ms on the original box. Replayed from a
+graph, the same calls took 0.02 ms. Per-shape graph times are in
+`results/graph_timing.csv`. `scripts/profile_sparse_kernels.py` lists the GPU
+work per cuSPARSELt call: a small elementwise kernel, a device copy, and one
+`sm86_xmma_sparse_gemm` kernel.
 
 ## Limitations
 
